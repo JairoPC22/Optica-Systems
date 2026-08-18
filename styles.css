@@ -1,5 +1,5 @@
 /* ============================================================
-   ÓPTICA AURORA — Sistema de Gestión Interno
+   ÓPTICA-SYSTEMS — Sistema de Gestión Interno
    styles.css
    Paleta: Azul oscuro #1F3A5F | Azul medio #2E5C8A
            Turquesa #4FC3C7 | Blanco #FFFFFF | Gris #F4F6F8
@@ -185,7 +185,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   letter-spacing: .2em;
   color: var(--azul-claro);
 }
-.logo-aurora {
+.logo-marca {
   font-size: 1.6rem;
   font-weight: 700;
   color: var(--azul-oscuro);
@@ -419,6 +419,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   padding: .9rem .5rem .3rem;
   white-space: nowrap;
 }
+.nav-section-label:first-child { padding-top: .4rem; }
 .nav-item {
   display: flex;
   align-items: center;
@@ -433,6 +434,14 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   margin-bottom: 2px;
   position: relative;
   white-space: nowrap;
+}
+/* En pantallas de poca altura (laptops pequeñas) el menú lateral con 9
+   ítems + 5 encabezados de sección no entraba sin scroll. Se acorta el
+   espaciado solo aquí — en pantallas altas y en el cajón móvil (donde el
+   tamaño de toque importa más) se conserva el espaciado cómodo original. */
+@media (max-height: 700px) {
+  .nav-section-label { padding: .5rem .5rem .2rem; }
+  .nav-item { padding: .5rem .85rem; }
 }
 .nav-item svg { width: 17px; height: 17px; flex-shrink: 0; }
 .nav-item:hover { background: rgba(255,255,255,.07); color: var(--blanco); }
@@ -472,6 +481,10 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 }
 .btn-logout svg { width: 17px; height: 17px; flex-shrink: 0; }
 .btn-logout:hover { background: rgba(229,57,53,.12); color: var(--rojo); }
+/* "Cambiar contraseña" comparte estructura con "Cerrar sesión" pero no es
+   una acción destructiva: usa un hover neutro en vez del rojo de logout. */
+.btn-sidebar-action { margin-bottom: .4rem; }
+.btn-sidebar-action:hover { background: rgba(79,195,199,.12); color: var(--turquesa); }
 
 /* ── MAIN CONTENT ── */
 .main-content {
@@ -723,6 +736,10 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   gap: 1.2rem;
 }
 @media (max-width: 1100px) { .dashboard-grid { grid-template-columns: 1fr; } }
+/* Los empleados no ven "Actividad Reciente" (la auditoría es solo-admin):
+   sin esto, la columna de 380px quedaría vacía y la tarjeta de Adeudos se
+   vería descentrada en vez de ocupar todo el ancho disponible. */
+.dashboard-grid:has(#dash-actividad-card.hidden) { grid-template-columns: 1fr; }
 
 /* ── CARD ── */
 .card {
@@ -1547,11 +1564,12 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   .table tbody td:last-child::before { display: none; }
   .action-btns {
     justify-content: center;
-    gap: .6rem;
+    gap: .5rem;
   }
+  /* 44px es el tamaño mínimo de área táctil recomendado (Apple HIG / Material) */
   .btn-action {
-    width: 38px;
-    height: 38px;
+    width: 44px;
+    height: 44px;
   }
 
   .empty-row {

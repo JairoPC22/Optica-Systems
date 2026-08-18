@@ -1,4 +1,4 @@
-# Óptica Aurora — Sistema Interno
+# Óptica-Systems — Sistema Interno
 
 Sistema web interno de gestión para una óptica: clientes, historial clínico,
 ventas, pagos, control de adeudos, garantías, inventario, auditoría y

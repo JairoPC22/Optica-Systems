@@ -1,7 +1,7 @@
 {
-  "name": "Óptica Aurora — Sistema",
-  "short_name": "Óptica Aurora",
-  "description": "Sistema de gestión interno de Óptica Aurora",
+  "name": "Óptica-Systems",
+  "short_name": "Óptica-Systems",
+  "description": "Sistema de gestión interno de Óptica-Systems",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#1F3A5F",

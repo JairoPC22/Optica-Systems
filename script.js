@@ -57,7 +57,7 @@ const STATE = {
    💾  MODO OFFLINE — IndexedDB + Cola de operaciones
 ══════════════════════════════════════════════════════════════ */
 
-const _IDB = { nombre: 'aurora_offline', version: 1, db: null };
+const _IDB = { nombre: 'opticasystems_offline', version: 1, db: null };
 
 async function idbAbrir() {
   if (_IDB.db) return _IDB.db;
@@ -229,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Verificar sesión activa (solo dura mientras la pestaña está abierta —
   // sessionStorage, nunca localStorage, para no dejar el token accesible
   // de forma permanente en el navegador).
-  const sesion = sessionStorage.getItem('aurora_sesion');
+  const sesion = sessionStorage.getItem('opticasystems_sesion');
   if (sesion) {
     try {
       const datos = JSON.parse(sesion);
@@ -239,10 +239,10 @@ document.addEventListener('DOMContentLoaded', () => {
         STATE.sesionExpira = datos.expira;
         iniciarApp();
       } else {
-        sessionStorage.removeItem('aurora_sesion');
+        sessionStorage.removeItem('opticasystems_sesion');
       }
     } catch {
-      sessionStorage.removeItem('aurora_sesion');
+      sessionStorage.removeItem('opticasystems_sesion');
     }
   }
 
@@ -346,7 +346,7 @@ async function apiAccion(action, payload = {}) {
  *  cada vez que cambie STATE.usuario/sesionToken/sesionExpira, para que un
  *  reload no restaure datos obsoletos (p. ej. debeCambiarPassword). */
 function guardarSesionStorage() {
-  sessionStorage.setItem('aurora_sesion', JSON.stringify({
+  sessionStorage.setItem('opticasystems_sesion', JSON.stringify({
     usuario: STATE.usuario, token: STATE.sesionToken, expira: STATE.sesionExpira,
   }));
 }
@@ -434,7 +434,7 @@ function handleLogout() {
       body: JSON.stringify({ action: 'logout', token: STATE.sesionToken }),
     }).catch(() => {});
   }
-  sessionStorage.removeItem('aurora_sesion');
+  sessionStorage.removeItem('opticasystems_sesion');
   STATE.usuario = null;
   STATE.sesionToken = null;
   STATE.sesionExpira = null;
@@ -649,6 +649,17 @@ function renderUsuarioUI() {
 
   const navUsuarios = document.getElementById('nav-item-usuarios');
   if (navUsuarios) navUsuarios.style.display = esAdmin ? '' : 'none';
+
+  // Sin esto, un empleado veía el encabezado "SISTEMA" del menú lateral sin
+  // ningún elemento debajo (los dos botones de esa sección son solo-admin).
+  const navSeccionSistema = document.getElementById('nav-section-sistema');
+  if (navSeccionSistema) navSeccionSistema.style.display = esAdmin ? '' : 'none';
+
+  // La auditoría es solo-admin: sin esto, un empleado veía la tarjeta
+  // "Actividad Reciente" del dashboard siempre vacía (el servidor rechaza
+  // la lectura) con un botón "Ver todo" que no llevaba a ningún lado.
+  const dashActividadCard = document.getElementById('dash-actividad-card');
+  if (dashActividadCard) dashActividadCard.classList.toggle('hidden', !esAdmin);
 
   const ventasEmpleadoWrap = document.getElementById('ventas-empleado-wrap');
   if (ventasEmpleadoWrap) ventasEmpleadoWrap.classList.toggle('hidden', !esAdmin);
@@ -891,6 +902,9 @@ async function confirmarResetPassword() {
     error.classList.remove('hidden');
     return;
   }
+  const btn = document.querySelector('#modal-reset-password .btn-primary');
+  if (btn?.disabled) return;
+  if (btn) btn.disabled = true;
   try {
     const json = await apiAccion('admin_reset_password', { usuario: _resetPasswordUsuarioObjetivo, nueva });
     if (!json.ok) {
@@ -904,6 +918,8 @@ async function confirmarResetPassword() {
   } catch (err) {
     error.querySelector('span').textContent = 'Error de conexión. Intenta de nuevo.';
     error.classList.remove('hidden');
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
@@ -915,13 +931,17 @@ function confirmarRevocarSesiones(usuarioLogin) {
     icono: 'log-out',
     claseBoton: 'primary',
   });
-  document.getElementById('confirm-btn').onclick = async () => {
+  document.getElementById('confirm-btn').onclick = async (e) => {
+    const btn = e.currentTarget;
+    if (btn.disabled) return;
+    btn.disabled = true;
     try {
       const json = await apiAccion('admin_revocar_sesiones', { usuario: usuarioLogin });
       if (!json.ok) { showToast(json.error || 'No se pudo revocar la sesión', 'error'); return; }
       showToast('Sesiones revocadas correctamente', 'success');
       closeAllModals();
     } catch { showToast('Error de conexión', 'error'); }
+    finally { btn.disabled = false; }
   };
   openModal('modal-confirmar');
   feather.replace();
@@ -936,7 +956,10 @@ function confirmarCambiarActivoUsuario(usuarioLogin, nuevoActivo) {
     icono: nuevoActivo ? 'user-check' : 'user-x',
     claseBoton: nuevoActivo ? 'primary' : 'danger',
   });
-  document.getElementById('confirm-btn').onclick = async () => {
+  document.getElementById('confirm-btn').onclick = async (e) => {
+    const btn = e.currentTarget;
+    if (btn.disabled) return;
+    btn.disabled = true;
     try {
       const json = await apiAccion('admin_set_activo', { usuario: usuarioLogin, activo: nuevoActivo });
       if (!json.ok) { showToast(json.error || `No se pudo ${accion} al usuario`, 'error'); return; }
@@ -944,12 +967,17 @@ function confirmarCambiarActivoUsuario(usuarioLogin, nuevoActivo) {
       closeAllModals();
       cargarYRenderUsuarios();
     } catch { showToast('Error de conexión', 'error'); }
+    finally { btn.disabled = false; }
   };
   openModal('modal-confirmar');
   feather.replace();
 }
 
 async function cargarAuditoria() {
+  // El servidor rechaza esta lectura para quien no sea administrador — evitar
+  // la petición (siempre fallaría) y el reintento en cola que eso dispararía.
+  const rol = (STATE.usuario?.rol || '').toLowerCase();
+  if (rol !== 'admin' && rol !== 'administrador') { STATE.auditoria = []; return; }
   try {
     const res = await apiGet(CONFIG.HOJAS.AUDITORIA);
     STATE.auditoria = [...(res.data || [])].reverse(); // más recientes primero
@@ -1133,7 +1161,7 @@ function doExportVentas() {
   else if (hasta)     sufijo = `_hasta_${hasta}`;
   if (empleado)       sufijo += `_${empleado.replace(/\s+/g, '_')}`;
 
-  link.download = `ventas_aurora${sufijo}.csv`;
+  link.download = `ventas_optica-systems${sufijo}.csv`;
   link.click();
   closeAllModals();
   showToast(`${ventas.length} ventas exportadas correctamente`, 'success');
@@ -1189,7 +1217,7 @@ function exportInventario() {
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   link.href  = URL.createObjectURL(blob);
-  link.download = `inventario_aurora_${new Date().toISOString().split('T')[0]}.csv`;
+  link.download = `inventario_optica-systems_${new Date().toISOString().split('T')[0]}.csv`;
   link.click();
   showToast(`${STATE.inventario.length} productos exportados`, 'success');
 }
@@ -2578,8 +2606,16 @@ async function cargarPagos() {
     STATE.pagos = res.data || [];
   } catch { STATE.pagos = []; }
 }
+/**
+ * Deja solo dígitos. Se usa para construir enlaces de WhatsApp insertados
+ * directamente en atributos href (no pasan por esc()) — si se permitieran
+ * comillas u otros caracteres, un teléfono malicioso podría romper el
+ * atributo HTML e inyectar código (XSS almacenado). Reducir a solo dígitos
+ * elimina el riesgo por completo y de paso produce un número válido para
+ * wa.me.
+ */
 function sanitizarTelefono(tel) {
-  return String(tel || '').replace(/[\s\-().+]/g, '');
+  return String(tel || '').replace(/\D/g, '');
 }
 function calcularPagado(ventaId) {
   if (ventaId === null || ventaId === undefined || ventaId === '') return 0;
@@ -3228,7 +3264,7 @@ async function sendRecordatorio() {
       etiqueta:     'Saldo pendiente',
       saldo:        formatMoney(saldo),
       ultimo_pago:  ultimoPago ? `${formatMoney(ultimoPago.monto)} el ${ultimoPago.fecha}` : 'Sin pagos previos',
-      mensaje:      `Hola ${c.nombre.split(' ')[0]}, te recordamos que tienes un saldo pendiente de ${formatMoney(saldo)} en Óptica Aurora. ¡Estamos aquí para ayudarte!`,
+      mensaje:      `Hola ${c.nombre.split(' ')[0]}, te recordamos que tienes un saldo pendiente de ${formatMoney(saldo)} en Óptica-Systems. ¡Estamos aquí para ayudarte!`,
       contacto:     'WhatsApp: (282) 129-2915',
     });
     await registrarAuditoria('Pago', `${STATE.usuario.nombre} envió recordatorio de pago a ${c.nombre}`);
@@ -3268,7 +3304,7 @@ async function sendCorreoAgradecimiento(cliente, totalVenta) {
     to_email: cliente.email,
     total:    formatMoney(totalVenta),
     mensaje:  `¡Gracias ${cliente.nombre.split(' ')[0]}! Tu pago ha sido recibido y tu cuenta está al corriente. Si tienes dudas o necesitas facturación, contáctanos.`,
-    contacto: 'Óptica Aurora — Tel: (282) 129-2915',
+    contacto: 'Óptica-Systems — Tel: (282) 129-2915',
   });
   await registrarAuditoria('Pago', `Correo de agradecimiento enviado a ${cliente.nombre}`);
   showToast(`Correo de agradecimiento enviado a ${cliente.nombre}`, 'success');
@@ -4025,7 +4061,7 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
     .header-left{display:flex;align-items:center;gap:14px;}
     .logo-img{width:54px;height:54px;border-radius:12px;background:rgba(255,255,255,.12);padding:4px;object-fit:contain;border:1.5px solid rgba(255,255,255,.2);}
     .logo-text .optica{font-size:10px;font-weight:600;letter-spacing:.22em;color:#7EC8CB;display:block;}
-    .logo-text .aurora{font-size:24px;font-weight:800;color:#fff;letter-spacing:.04em;line-height:1.1;}
+    .logo-text .marca-nombre{font-size:24px;font-weight:800;color:#fff;letter-spacing:.04em;line-height:1.1;}
     .header-right{text-align:right;}
     .doc-tipo{font-size:10px;font-weight:700;letter-spacing:.18em;color:#7EC8CB;text-transform:uppercase;}
     .doc-num{font-size:11px;color:rgba(255,255,255,.5);margin-top:3px;font-weight:400;}
@@ -4217,10 +4253,10 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
   <div class="header">
     <div class="header-inner">
       <div class="header-left">
-        <img src="${logoURL}" alt="Óptica Aurora" class="logo-img" onerror="this.style.display='none'" />
+        <img src="${logoURL}" alt="Óptica-Systems" class="logo-img" onerror="this.style.display='none'" />
         <div class="logo-text">
           <span class="optica">ÓPTICA</span>
-          <span class="aurora">AURORA</span>
+          <span class="marca-nombre">SYSTEMS</span>
         </div>
       </div>
       <div class="header-right">
@@ -4372,7 +4408,7 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
     <div class="footer-brand">
       <img src="${logoURL}" alt="" class="footer-logo" onerror="this.style.display='none'" />
       <div class="footer-info">
-        <div class="footer-nombre">Óptica Aurora</div>
+        <div class="footer-nombre">Óptica-Systems</div>
         <div class="footer-sub">Sistema de Gestión Interno · ${new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'})}</div>
       </div>
     </div>
@@ -4381,7 +4417,7 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
       <div class="firma-linea"></div>
       <div class="firma-nombre">Lic. Opt. Jorge Espinosa</div>
       <div class="firma-titulo">Optometrista Certificado</div>
-      <div class="firma-ced">Óptica Aurora</div>
+      <div class="firma-ced">Óptica-Systems</div>
     </div>
   </div>
   <div class="wm-strip"></div>
@@ -5303,7 +5339,7 @@ function imprimirTicket(ventaId) {
   <div class="t-header">
     <img src="${logoURL}" class="t-logo" onerror="this.style.display='none'" />
     <div class="t-marca">ÓPTICA</div>
-    <div class="t-nombre">AURORA</div>
+    <div class="t-nombre">SYSTEMS</div>
     <div class="t-sub">Sistema de Gestión Interno</div>
   </div>
   <div class="t-accent"></div>
@@ -5333,7 +5369,7 @@ function imprimirTicket(ventaId) {
   <div class="t-corte">- - - - - - - - - - - - - - - - - -</div>
   <div class="t-footer">
     <div class="t-gracias">¡Gracias por su preferencia!</div>
-    <div class="t-footer-sub">Óptica Aurora<br>Teziutlán, Pue. · Tel: (282) 129-2915<br>Impreso: ${fechaHoy}</div>
+    <div class="t-footer-sub">Óptica-Systems<br>Teziutlán, Pue. · Tel: (282) 129-2915<br>Impreso: ${fechaHoy}</div>
   </div>
 </div>
 </body></html>`;
@@ -5396,7 +5432,7 @@ Saldo pendiente: ${formatMoney(saldo)}
 
 ${saldo === 0 ? '✓ Su cuenta está completamente saldada.' : `⚠️ Recuerde que tiene un saldo pendiente de ${formatMoney(saldo)}.`}
 
-Gracias por su preferencia — Óptica Aurora
+Gracias por su preferencia — Óptica-Systems
       `.trim(),
     });
     await registrarAuditoria('Pago', `Ticket enviado por correo a ${cliente.nombre} (folio #${folio})`);
@@ -5503,7 +5539,7 @@ function toggleRevisionDetalle() {
               : '<span style="font-size:.75rem;color:#aaa">Sin correo</span>'
             }
             ${c.telefono
-              ? `<a class="btn-sm" href="https://wa.me/52${sanitizarTelefono(c.telefono)}?text=${encodeURIComponent(`Hola ${c.nombre.split(' ')[0]}, ya lleva ${mesesTexto} con sus ${lente} de Óptica Aurora. ¿Le gustaría pasar a una revisión? 👓`)}" target="_blank">📱 WhatsApp</a>`
+              ? `<a class="btn-sm" href="https://wa.me/52${sanitizarTelefono(c.telefono)}?text=${encodeURIComponent(`Hola ${c.nombre.split(' ')[0]}, ya lleva ${mesesTexto} con sus ${lente} de Óptica-Systems. ¿Le gustaría pasar a una revisión? 👓`)}" target="_blank">📱 WhatsApp</a>`
               : ''
             }
             <button class="btn-sm" onclick="verDetalleCliente('${c.id}')">Ver ficha</button>
@@ -5541,7 +5577,7 @@ async function enviarRecordatorioRevision(clienteId) {
       etiqueta:     '¿Cómo van tus lentes? 👓',
       saldo:        `${mesesTexto} desde tu compra`,
       ultimo_pago:  `${lente}${fecha ? ' · adquiridos el ' + fecha : ''}`,
-      mensaje:      `Hola ${c.nombre.split(' ')[0]}, han pasado ${mesesTexto} desde que adquiriste ${lente} en Óptica Aurora. ¡Queremos saber cómo te han ido! Te invitamos a pasar para una revisión sin costo. Recuerda que una buena graduación mejora tu calidad de vida. 👓`,
+      mensaje:      `Hola ${c.nombre.split(' ')[0]}, han pasado ${mesesTexto} desde que adquiriste ${lente} en Óptica-Systems. ¡Queremos saber cómo te han ido! Te invitamos a pasar para una revisión sin costo. Recuerda que una buena graduación mejora tu calidad de vida. 👓`,
       contacto:     'WhatsApp: (282) 129-2915',
     });
     await registrarAuditoria('Pago', `Recordatorio de revisión enviado a ${c.nombre} (${mesesTexto} con ${lente})`);
@@ -5663,7 +5699,7 @@ const isPWA = window.navigator.standalone === true ||
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Reporte — Óptica Aurora</title>
+  <title>Reporte — Óptica-Systems</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
@@ -5687,7 +5723,7 @@ const isPWA = window.navigator.standalone === true ||
     .rpt-logo-area{display:flex;align-items:center;gap:14px;position:relative;z-index:2;}
     .rpt-logo{width:50px;height:50px;border-radius:10px;background:rgba(255,255,255,.12);padding:4px;object-fit:contain;border:1.5px solid rgba(255,255,255,.2);}
     .rpt-marca .optica{font-size:9px;letter-spacing:.22em;color:#7EC8CB;font-weight:600;display:block;}
-    .rpt-marca .aurora{font-size:22px;font-weight:800;color:#fff;letter-spacing:.04em;}
+    .rpt-marca .marca-nombre{font-size:22px;font-weight:800;color:#fff;letter-spacing:.04em;}
     .rpt-titulo-area{text-align:right;position:relative;z-index:2;}
     .rpt-titulo{font-size:11px;font-weight:800;letter-spacing:.16em;color:#7EC8CB;text-transform:uppercase;}
     .rpt-fecha{font-size:10.5px;color:rgba(255,255,255,.5);margin-top:4px;}
@@ -5779,7 +5815,7 @@ const isPWA = window.navigator.standalone === true ||
       <img src="${logoURL}" class="rpt-logo" onerror="this.style.display='none'" />
       <div class="rpt-marca">
         <span class="optica">ÓPTICA</span>
-        <span class="aurora">AURORA</span>
+        <span class="marca-nombre">SYSTEMS</span>
       </div>
     </div>
     <div class="rpt-titulo-area">
@@ -5936,7 +5972,7 @@ const isPWA = window.navigator.standalone === true ||
   </div>
 
   <div class="rpt-footer">
-    <div class="rpt-footer-text">Óptica Aurora · Sistema de Gestión Interno · Período: ${esc(labelPeriodo)}</div>
+    <div class="rpt-footer-text">Óptica-Systems · Sistema de Gestión Interno · Período: ${esc(labelPeriodo)}</div>
 <div class="rpt-footer-text">Generado el ${fechaHoy} · ${esc(STATE.usuario?.nombre || '')}${empLabel ? ' · Empleado: ' + esc(empLabel) : ''}</div>  </div>
   <div class="wm-strip"></div>
 </div>
@@ -6149,7 +6185,7 @@ function renderInventario(lista = STATE.inventario) {
       <td data-label="Producto">
         <div class="inv-prod-cell">
           ${p.imagenUrl
-            ? `<img src="${p.imagenUrl}" alt="${esc(p.nombre)}" class="inv-thumb" onerror="this.style.display='none'" />`
+            ? `<img src="${esc(p.imagenUrl)}" alt="${esc(p.nombre)}" class="inv-thumb" onerror="this.style.display='none'" />`
             : ''
           }
           <div>
@@ -6369,7 +6405,7 @@ async function guardarAjusteStock() {
 
     closeAllModals();
     filterInventario();
-    showToast(`Stock actualizado...: ${p.nombre} → ${nuevoStock} unidades`, 'success');
+    showToast(`Stock actualizado: ${p.nombre} → ${nuevoStock} unidades`, 'success');
 
     if (nuevoStock === 0) showToast(`⚠️ ${p.nombre} se ha agotado`, 'warning', 5000);
     else if (nuevoStock <= parseInt(p.stockMin || 3)) showToast(`⚠️ ${p.nombre} tiene stock bajo (${nuevoStock} unidades)`, 'warning', 5000);
@@ -6411,7 +6447,7 @@ async function eliminarProducto(id) {
 ══════════════════════════════════════════════════════════════ */
 function toggleDarkMode() {
   const isDark = document.body.classList.toggle('dark');
-  localStorage.setItem('aurora_dark', isDark ? '1' : '0');
+  localStorage.setItem('opticasystems_dark', isDark ? '1' : '0');
   const icon = document.getElementById('icon-dark');
   if (icon) {
     icon.setAttribute('data-feather', isDark ? 'sun' : 'moon');
@@ -6425,7 +6461,7 @@ function toggleDarkMode() {
 
 // Restaurar preferencia al cargar
 (function() {
-  if (localStorage.getItem('aurora_dark') === '1') {
+  if (localStorage.getItem('opticasystems_dark') === '1') {
     document.body.classList.add('dark');
   }
   document.documentElement.classList.remove('dark-preload');

@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE = 'aurora-v10';
+const CACHE = 'optica-systems-v1';
 const SHELL = [
   './',
   './index.html',

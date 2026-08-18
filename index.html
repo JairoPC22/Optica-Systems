@@ -20,15 +20,15 @@
                  base-uri 'self';
                  frame-ancestors 'self';">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-  <title>Óptica Aurora — Sistema Interno</title>
+  <title>Óptica-Systems — Sistema Interno</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1F3A5F">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Óptica Aurora">
+  <meta name="apple-mobile-web-app-title" content="Óptica-Systems">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <script>
-  if (localStorage.getItem('aurora_dark') === '1') {
+  if (localStorage.getItem('opticasystems_dark') === '1') {
     document.documentElement.classList.add('dark-preload');
   }
 </script>
@@ -61,11 +61,11 @@
     <div class="login-card">
       <div class="login-logo">
         <div class="logo-icon">
-  <img src="Logo-optica.ico" alt="Óptica Aurora" style="width:52px;height:52px;object-fit:contain;" />
+  <img src="Logo-optica.ico" alt="Óptica-Systems" style="width:52px;height:52px;object-fit:contain;" />
 </div>
         <div class="logo-text">
           <span class="logo-optica">ÓPTICA</span>
-          <span class="logo-aurora">AURORA</span>
+          <span class="logo-marca">SYSTEMS</span>
         </div>
       </div>
       <p class="login-subtitle">Sistema de Gestión Interno</p>
@@ -96,7 +96,7 @@
           <span id="login-spinner" class="spinner hidden"></span>
         </button>
       </form>
-      <p class="login-footer">Solo personal autorizado · Óptica Aurora © 2025</p>
+      <p class="login-footer">Solo personal autorizado · Óptica-Systems © 2025</p>
     </div>
   </div>
 
@@ -109,11 +109,11 @@
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <div class="sidebar-logo">
-<img src="Logo-optica.ico" alt="Óptica Aurora" 
+<img src="Logo-optica.ico" alt="Óptica-Systems" 
      style="width:44px; height:44px; border-radius:8px; object-fit:contain;" />
 <div>
   <div class="sidebar-brand">ÓPTICA</div>
-  <div class="sidebar-brand-bold">AURORA</div>
+  <div class="sidebar-brand-bold">SYSTEMS</div>
 </div>
         </div>
         <button class="sidebar-toggle" onclick="toggleSidebar()" title="Cerrar menú">
@@ -174,7 +174,7 @@
           <span class="nav-badge" id="badge-stock" style="background:var(--amarillo);color:#333">0</span>
         </button>
 
-        <div class="nav-section-label">SISTEMA</div>
+        <div class="nav-section-label" id="nav-section-sistema">SISTEMA</div>
         <button class="nav-item" id="nav-item-usuarios" onclick="navigateTo('usuarios')" data-section="usuarios">
           <i data-feather="user-check"></i>
           <span>Usuarios</span>
@@ -186,7 +186,7 @@
       </nav>
 
       <div class="sidebar-footer">
-        <button class="btn-logout" onclick="abrirCambioPassword()" style="margin-bottom:.4rem;">
+        <button class="btn-logout btn-sidebar-action" onclick="abrirCambioPassword()">
           <i data-feather="key"></i>
           <span>Cambiar contraseña</span>
         </button>
@@ -327,7 +327,7 @@
             </div>
           </div>
 
-          <div class="card">
+          <div class="card" id="dash-actividad-card">
             <div class="card-header">
               <h3>Actividad Reciente</h3>
               <button class="btn-sm" onclick="navigateTo('auditoria')">Ver todo</button>
