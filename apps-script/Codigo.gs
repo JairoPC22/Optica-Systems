@@ -605,33 +605,35 @@ function registrarEvento_(usuarioNombre, tipo, descripcion) {
 ═══════════════════════════════════════════════════════════════ */
 
 /**
- * LimiteIntentos.gs — Freno a fuerza bruta en login usando CacheService
- * (compartido entre ejecuciones, con expiración automática — no requiere
- * limpieza manual). El bloqueo es temporal y por usuario, para no permitir
- * que un atacante bloquee una cuenta de forma permanente.
+ * LimiteIntentos.gs — Freno a fuerza bruta usando CacheService (compartido
+ * entre ejecuciones, con expiración automática — no requiere limpieza
+ * manual). El bloqueo es temporal y por clave (usuario, o usuario+acción),
+ * para no permitir que un atacante bloquee una cuenta de forma permanente.
+ * Se usa tanto para login como para verificar la contraseña actual al
+ * cambiarla (mismo riesgo de fuerza bruta si alguien roba una sesión).
  */
 
-function claveIntentos_(usuarioNormalizado) {
-  return 'login_intentos_' + usuarioNormalizado;
+function claveIntentos_(espacio, clave) {
+  return espacio + '_intentos_' + clave;
 }
 
-function estaBloqueado_(usuarioNormalizado) {
+function estaBloqueado_(espacio, clave, maxIntentos) {
   var cache = CacheService.getScriptCache();
-  var valor = cache.get(claveIntentos_(usuarioNormalizado));
+  var valor = cache.get(claveIntentos_(espacio, clave));
   var intentos = valor ? parseInt(valor, 10) : 0;
-  return intentos >= CONFIG.LOGIN_MAX_INTENTOS;
+  return intentos >= maxIntentos;
 }
 
-function registrarIntentoFallido_(usuarioNormalizado) {
+function registrarIntentoFallido_(espacio, clave, ventanaSegundos) {
   var cache = CacheService.getScriptCache();
-  var clave = claveIntentos_(usuarioNormalizado);
-  var valor = cache.get(clave);
+  var claveCache = claveIntentos_(espacio, clave);
+  var valor = cache.get(claveCache);
   var intentos = (valor ? parseInt(valor, 10) : 0) + 1;
-  cache.put(clave, String(intentos), CONFIG.LOGIN_VENTANA_BLOQUEO_SEGUNDOS);
+  cache.put(claveCache, String(intentos), ventanaSegundos);
 }
 
-function limpiarIntentos_(usuarioNormalizado) {
-  CacheService.getScriptCache().remove(claveIntentos_(usuarioNormalizado));
+function limpiarIntentos_(espacio, clave) {
+  CacheService.getScriptCache().remove(claveIntentos_(espacio, clave));
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -657,7 +659,7 @@ function manejarLogin_(payload) {
     return { ok: false, error: MENSAJE_LOGIN_INVALIDO };
   }
 
-  if (estaBloqueado_(usuarioNorm)) {
+  if (estaBloqueado_('login', usuarioNorm, CONFIG.LOGIN_MAX_INTENTOS)) {
     registrarEvento_(usuarioTexto, 'Login bloqueado', 'Demasiados intentos fallidos.');
     return { ok: false, error: MENSAJE_BLOQUEADO };
   }
@@ -666,7 +668,7 @@ function manejarLogin_(payload) {
   var fila = usuarios.filas.filter(function (u) { return normalizarUsuario_(u.usuario) === usuarioNorm; })[0];
 
   if (!fila || !fila.hash || !fila.salt) {
-    registrarIntentoFallido_(usuarioNorm);
+    registrarIntentoFallido_('login', usuarioNorm, CONFIG.LOGIN_VENTANA_BLOQUEO_SEGUNDOS);
     return { ok: false, error: MENSAJE_LOGIN_INVALIDO };
   }
 
@@ -677,11 +679,11 @@ function manejarLogin_(payload) {
   var activo = !(fila.activo === false || fila.activo === 'FALSE' || fila.activo === 'false');
 
   if (!coincide || !activo) {
-    registrarIntentoFallido_(usuarioNorm);
+    registrarIntentoFallido_('login', usuarioNorm, CONFIG.LOGIN_VENTANA_BLOQUEO_SEGUNDOS);
     return { ok: false, error: MENSAJE_LOGIN_INVALIDO };
   }
 
-  limpiarIntentos_(usuarioNorm);
+  limpiarIntentos_('login', usuarioNorm);
   var sesion = crearSesion_(fila);
   registrarEvento_(fila.nombre, 'Login', 'Inicio de sesión correcto.');
 
@@ -706,6 +708,16 @@ function manejarLogout_(token) {
 function manejarCambioPassword_(sesionUsuario, tokenActual, payload) {
   var actual = String(payload && payload.actual || '');
   var nueva = String(payload && payload.nueva || '');
+  var claveIntento = String(sesionUsuario.id);
+
+  // Freno a fuerza bruta: alguien con una sesión robada (p. ej. token
+  // copiado de sessionStorage) pero sin la contraseña real podría intentar
+  // adivinarla probando muchos valores de "actual" — sin este límite, este
+  // endpoint no tenía ninguna protección contra eso.
+  if (estaBloqueado_('cambiopw', claveIntento, CONFIG.LOGIN_MAX_INTENTOS)) {
+    registrarEvento_(sesionUsuario.nombre, 'Cambio de contraseña bloqueado', 'Demasiados intentos fallidos al verificar la contraseña actual.');
+    return { ok: false, error: MENSAJE_BLOQUEADO };
+  }
 
   var validacion = validarPasswordNueva_(nueva);
   if (!validacion.ok) return validacion;
@@ -717,9 +729,18 @@ function manejarCambioPassword_(sesionUsuario, tokenActual, payload) {
   var iteraciones = parseInt(fila.iteraciones, 10) || CONFIG.PBKDF2_ITERACIONES;
   var hashActual = calcularHashPassword_(actual, String(fila.salt), iteraciones);
   if (!compararConstante_(hashActual, String(fila.hash))) {
+    registrarIntentoFallido_('cambiopw', claveIntento, CONFIG.LOGIN_VENTANA_BLOQUEO_SEGUNDOS);
     return { ok: false, error: 'La contraseña actual no es correcta.' };
   }
 
+  // La nueva contraseña debe ser distinta de la actual (mismo salt/iteraciones
+  // que ya se usaron arriba, así que basta comparar contra el mismo hash).
+  var hashNuevaConSaltActual = calcularHashPassword_(nueva, String(fila.salt), iteraciones);
+  if (compararConstante_(hashNuevaConSaltActual, String(fila.hash))) {
+    return { ok: false, error: 'La nueva contraseña debe ser distinta de la actual.' };
+  }
+
+  limpiarIntentos_('cambiopw', claveIntento);
   guardarNuevaPassword_(usuarios, fila, nueva, false);
   revocarSesionesExceptoActual_(fila.id, tokenActual);
   registrarEvento_(fila.nombre, 'Cambio de contraseña', 'El usuario cambió su propia contraseña.');
