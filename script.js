@@ -345,7 +345,12 @@ function actualizarFechaTopbar() {
  */
 async function apiAccion(action, payload = {}) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 25000);
+  // 45s: Apps Script puede tardar bastante más de lo habitual en la primera
+  // petición tras publicar una nueva implementación (arranque en frío);
+  // 25s cortaba la conexión ahí mismo aunque el servidor sí llegaba a
+  // responder, mostrando "Error de conexión" con la operación en realidad
+  // en curso (o ya completada) en el servidor.
+  const timer = setTimeout(() => controller.abort(), 45000);
   try {
     const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
       method: 'POST',
@@ -574,7 +579,14 @@ async function handleCambiarPassword(e) {
     }
   } catch (err) {
     limpiarCampos();
-    error.textContent = 'Error de conexión. Intenta de nuevo.';
+    // No sabemos con certeza si el servidor llegó a aplicar el cambio antes
+    // de que se cortara la conexión del lado del cliente (p. ej. arranque en
+    // frío de Apps Script) — reintentar a ciegas con la MISMA contraseña
+    // "actual" podría fallar si el cambio sí se aplicó, y con el freno de
+    // fuerza bruta agregado a este endpoint, varios reintentos así podrían
+    // bloquear la cuenta temporalmente. Se le pide en su lugar volver a
+    // iniciar sesión para confirmar cuál contraseña quedó activa.
+    error.textContent = 'No se pudo confirmar la respuesta del servidor. Recarga la página (F5) e inicia sesión de nuevo — primero con la contraseña nueva; si no funciona, con la anterior — en vez de reintentar aquí.';
     error.classList.remove('hidden');
   } finally {
     btn.disabled = false;
@@ -717,7 +729,12 @@ async function apiGet(hoja, params = {}) {
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 25000);
+  // 45s: Apps Script puede tardar bastante más de lo habitual en la primera
+  // petición tras publicar una nueva implementación (arranque en frío);
+  // 25s cortaba la conexión ahí mismo aunque el servidor sí llegaba a
+  // responder, mostrando "Error de conexión" con la operación en realidad
+  // en curso (o ya completada) en el servidor.
+  const timer = setTimeout(() => controller.abort(), 45000);
   try {
     const res  = await fetch(url.toString(), { signal: controller.signal });
     const json = await res.json();
@@ -759,7 +776,12 @@ async function apiPost(hoja, action, data) {
   }
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 25000);
+  // 45s: Apps Script puede tardar bastante más de lo habitual en la primera
+  // petición tras publicar una nueva implementación (arranque en frío);
+  // 25s cortaba la conexión ahí mismo aunque el servidor sí llegaba a
+  // responder, mostrando "Error de conexión" con la operación en realidad
+  // en curso (o ya completada) en el servidor.
+  const timer = setTimeout(() => controller.abort(), 45000);
   try {
     const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
       method: 'POST',
