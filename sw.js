@@ -129,25 +129,9 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // ── CDN (feather, chart.js, emailjs) → caché primero ──
+  // ── CDN (feather, chart.js, emailjs, echarts + echarts-gl cargados bajo
+  //      demanda para las gráficas 3D) → caché primero ──
   if (url.hostname.includes('cdn.jsdelivr.net')) {
-    e.respondWith(
-      caches.match(e.request).then(cached => {
-        if (cached) return cached;
-        return fetch(e.request).then(res => {
-          if (res.ok) {
-            const clone = res.clone();
-            caches.open(CACHE).then(c => c.put(e.request, clone));
-          }
-          return res;
-        }).catch(() => new Response('', { status: 503 }));
-      })
-    );
-    return;
-  }
-
-  // ── cdnjs (three.js u otros) → caché primero ──
-  if (url.hostname.includes('cdnjs.cloudflare.com')) {
     e.respondWith(
       caches.match(e.request).then(cached => {
         if (cached) return cached;
