@@ -1707,6 +1707,52 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   height: 180px;
 }
 
+/* ── Toggle de vista 3D ── */
+.btn-3d {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .3rem .65rem;
+  border-radius: 99px;
+  border: 1.5px solid var(--gris-borde);
+  background: var(--blanco);
+  color: var(--gris-texto);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .03em;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+.btn-3d svg { width: 13px; height: 13px; }
+.btn-3d:hover { border-color: var(--turquesa); color: var(--turquesa-dark); }
+.btn-3d.activo {
+  background: linear-gradient(135deg, var(--azul-medio), var(--turquesa-boton));
+  border-color: transparent;
+  color: var(--blanco);
+}
+.btn-3d:disabled { opacity: .6; cursor: wait; }
+
+.grafica-3d-wrap {
+  padding: .4rem .6rem 1.2rem;
+}
+.grafica-3d-wrap:not(.hidden) { height: 260px; }
+
+.grafica-3d-fallback {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .7rem;
+  text-align: center;
+  padding: 1rem;
+}
+.grafica-3d-fallback p {
+  color: var(--gris-label);
+  font-size: .85rem;
+  margin: 0;
+}
+
 /* Leyenda del donut */
 .donut-leyenda {
   padding: 0 1.2rem 1.2rem;
@@ -2000,6 +2046,7 @@ body.dark .donut-num          { color: #e2eaf4; }
 
 body.dark .btn-outline { background: #1e2d3d; border-color: #2a3f55; color: #e2eaf4; }
 body.dark .btn-sm      { background: #1e2d3d; border-color: #2a3f55; color: #9ab0c8; }
+body.dark .btn-3d:not(.activo) { background: #1e2d3d; border-color: #2a3f55; color: #9ab0c8; }
 body.dark .btn-icon    { color: #9ab0c8; }
 body.dark .btn-icon:hover { background: #2a3f55; }
 

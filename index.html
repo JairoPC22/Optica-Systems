@@ -366,11 +366,17 @@
           <div class="card grafica-card grafica-card-wide">
             <div class="card-header">
               <h3>Ingresos por período</h3>
-              <div class="grafica-kpi" id="grafica-kpi-total">—</div>
+              <div style="display:flex;align-items:center;gap:.5rem;">
+                <div class="grafica-kpi" id="grafica-kpi-total">—</div>
+                <button class="btn-3d" id="btn-3d-ventas" onclick="toggleGrafica3D('ventas')" title="Ver como gráfica 3D">
+                  <i data-feather="box"></i> 3D
+                </button>
+              </div>
             </div>
-            <div class="grafica-wrap">
+            <div class="grafica-wrap" id="chart-ventas-2d-wrap">
               <canvas id="chart-ventas"></canvas>
             </div>
+            <div class="grafica-wrap grafica-3d-wrap hidden" id="chart-ventas-3d"></div>
           </div>
 
           <!-- Gráfica: estado de cuentas -->
@@ -855,6 +861,20 @@
             <div class="kpi-icon"><i data-feather="dollar-sign"></i></div>
             <div class="kpi-data"><div class="kpi-value" id="inv-kpi-valor">—</div><div class="kpi-label">Valor en Inventario</div></div>
           </div>
+        </div>
+
+        <!-- Gráfica: stock por categoría -->
+        <div class="card grafica-card" style="margin-bottom:1.2rem;">
+          <div class="card-header">
+            <h3>Stock por Categoría</h3>
+            <button class="btn-3d" id="btn-3d-inventario" onclick="toggleGrafica3D('inventario')" title="Ver como gráfica 3D">
+              <i data-feather="box"></i> 3D
+            </button>
+          </div>
+          <div class="grafica-wrap" id="chart-inventario-2d-wrap">
+            <canvas id="chart-inventario"></canvas>
+          </div>
+          <div class="grafica-wrap grafica-3d-wrap hidden" id="chart-inventario-3d"></div>
         </div>
 
         <div class="card">

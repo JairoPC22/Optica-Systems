@@ -27,6 +27,30 @@ const CONFIG = {
   },
 };
 
+/**
+ * Paleta única para todo lo que se dibuja en <canvas>/SVG (Chart.js,
+ * ECharts) — debe coincidir exactamente con las variables de color de
+ * styles.css. Antes cada gráfica tenía su propia copia de estos mismos
+ * hexadecimales escrita a mano (dos veces, con oportunidad de que
+ * divergieran); centralizarlos aquí garantiza que gráficas, badges y
+ * botones siempre combinen.
+ */
+const PALETA = {
+  azulOscuro:     '#1F3A5F',
+  azulMedio:      '#2E5C8A',
+  azulClaro:      '#6FA9C9',
+  turquesa:       '#4FC3C7',
+  turquesaOscuro: '#297a7d', // variante accesible de --turquesa-dark (modo claro)
+  verde:          '#4CAF50',
+  verdeTexto:     '#2E7D32',
+  rojo:           '#E53935',
+  rojoTexto:      '#C62828',
+  amarillo:       '#FBC02D',
+  amarilloTexto:  '#8a6d00',
+  grisLabel:      '#64758C',
+  blanco:         '#FFFFFF',
+};
+
 /* ══════════════════════════════════════════════════════════════
    📦  ESTADO GLOBAL DE LA APLICACIÓN
 ══════════════════════════════════════════════════════════════ */
@@ -458,9 +482,13 @@ function handleLogout() {
   if (usuariosBody) usuariosBody.innerHTML = '';
   const auditoriaBody = document.getElementById('auditoria-body');
   if (auditoriaBody) auditoriaBody.innerHTML = '';
-  try { if (_chartVentas)    { _chartVentas.destroy();    _chartVentas = null; } } catch(e) {}
-  try { if (_chartEstados)   { _chartEstados.destroy();   _chartEstados = null; } } catch(e) {}
-  try { if (_chartNumVentas) { _chartNumVentas.destroy(); _chartNumVentas = null; } } catch(e) {}
+  try { if (_chartVentas)     { _chartVentas.destroy();     _chartVentas = null; } } catch(e) {}
+  try { if (_chartEstados)    { _chartEstados.destroy();    _chartEstados = null; } } catch(e) {}
+  try { if (_chartNumVentas)  { _chartNumVentas.destroy();  _chartNumVentas = null; } } catch(e) {}
+  try { if (_chartInventario) { _chartInventario.destroy(); _chartInventario = null; } } catch(e) {}
+  try {
+    Object.keys(_echarts3D).forEach(k => { if (_echarts3D[k]) { _echarts3D[k].dispose(); _echarts3D[k] = null; } });
+  } catch(e) {}
   _periodoActual = 'semana';
 
   document.getElementById('app').classList.add('hidden');
@@ -4567,10 +4595,60 @@ function cambiarPaginaHistorial(p) {
    📊  GRÁFICAS DE VENTAS — versión mejorada
 ══════════════════════════════════════════════════════════════ */
 
-let _chartVentas    = null;
-let _chartEstados   = null;
-let _chartNumVentas = null;
-let _periodoActual  = 'semana';
+let _chartVentas     = null;
+let _chartEstados    = null;
+let _chartNumVentas  = null;
+let _chartInventario = null;
+let _periodoActual   = 'semana';
+
+const CATEGORIA_LABEL = {
+  armazon: 'Armazones', lente: 'Lentes', accesorio: 'Accesorios',
+  contacto: 'Lentes de contacto', solucion: 'Soluciones', otro: 'Otros',
+};
+
+/** Gráfica de barras "Stock por Categoría" en Inventario (vista 2D por defecto). */
+function renderGraficaInventario() {
+  const ctx = document.getElementById('chart-inventario')?.getContext('2d');
+  if (!ctx) return;
+
+  const porCategoria = new Map();
+  STATE.inventario.forEach(p => {
+    const cat = p.categoria || 'otro';
+    porCategoria.set(cat, (porCategoria.get(cat) || 0) + parseInt(p.stock || 0));
+  });
+  const categorias = [...porCategoria.keys()].sort((a, b) => porCategoria.get(b) - porCategoria.get(a));
+  const labels = categorias.map(c => CATEGORIA_LABEL[c] || capitalize(c));
+  const datos  = categorias.map(c => porCategoria.get(c));
+
+  STATE._ultimaGraficaInventario = { labels, datos };
+  actualizarGrafica3DSiVisible('inventario');
+
+  if (_chartInventario) _chartInventario.destroy();
+  if (!labels.length) return;
+
+  const gradiente = ctx.createLinearGradient(0, 0, 0, 220);
+  gradiente.addColorStop(0, 'rgba(41,122,125,.55)');
+  gradiente.addColorStop(1, 'rgba(41,122,125,.08)');
+
+  _chartInventario = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Unidades en stock', data: datos, backgroundColor: gradiente, borderColor: PALETA.turquesaOscuro, borderWidth: 1.5, borderRadius: 7, borderSkipped: false }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: { label: ctx => ` ${ctx.raw} unidad${ctx.raw === 1 ? '' : 'es'}` },
+          backgroundColor: '#1F3A5F', titleColor: '#7EC8CB', bodyColor: '#fff', cornerRadius: 8, padding: 12,
+        },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#8A9BB0', font: { size: 11 } } },
+        y: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#8A9BB0', font: { size: 11 }, stepSize: 1, precision: 0 }, beginAtZero: true },
+      },
+    },
+  });
+}
 
 function cambiarPeriodo(periodo, btn) {
   _periodoActual = periodo;
@@ -4698,7 +4776,9 @@ function renderGraficasRango(desdeStr, hastaStr) {
 }
 
 function _redibujarCharts(labels, datosIngresos, datosNumVentas, datosIngresosAnt, datosNumVentasAnt, pagadasPer, parcialesPer, deudasPer) {
-  const azul = '#2E5C8A', turquesa = '#4FC3C7', verde = '#4CAF50', rojo = '#E53935', amarillo = '#FBC02D';
+  const { azulMedio: azul, turquesa, verde, rojo, amarillo } = PALETA;
+  STATE._ultimaGraficaVentas = { labels, datos: datosIngresos };
+  actualizarGrafica3DSiVisible('ventas');
 
   const ctx1 = document.getElementById('chart-ventas')?.getContext('2d');
   if (ctx1) {
@@ -4930,18 +5010,15 @@ function renderGraficas() {
   setHTML('m-tasa-cobro',       tasaCobro + '%');
 
   // ── Colores ──
-  const azul     = '#2E5C8A';
-  const turquesa = '#4FC3C7';
-  const verde    = '#4CAF50';
-  const rojo     = '#E53935';
-  const amarillo = '#FBC02D';
-  const azulClaro = 'rgba(46,92,138,0.15)';
-  const turqFade  = 'rgba(79,195,199,0.15)';
+  const { azulMedio: azul, turquesa, verde, rojo, amarillo } = PALETA;
+  const azulMedioFade = 'rgba(46,92,138,0.15)';
 
   // ── CHART 1: Ingresos con línea de período anterior ──
   const ctx1 = document.getElementById('chart-ventas')?.getContext('2d');
   if (ctx1) {
     if (_chartVentas) _chartVentas.destroy();
+    STATE._ultimaGraficaVentas = { labels, datos: datosIngresos };
+    actualizarGrafica3DSiVisible('ventas');
 
     // Gradiente de relleno
     const gradiente = ctx1.createLinearGradient(0, 0, 0, 220);
@@ -4961,7 +5038,7 @@ function renderGraficas() {
             label: 'Período actual',
             data: datosIngresos,
             backgroundColor: datosIngresos.map((v,i) =>
-              i === datosIngresos.length - 1 ? turquesa : azulClaro
+              i === datosIngresos.length - 1 ? turquesa : azulMedioFade
             ),
             borderColor: datosIngresos.map((v,i) =>
               i === datosIngresos.length - 1 ? turquesa : azul
@@ -5191,11 +5268,205 @@ function renderGraficas() {
   }
 }
 
+/* ══════════════════════════════════════════════════════════════
+   🧊  GRÁFICAS 3D (ECharts + ECharts-GL, carga diferida)
+   ──────────────────────────────────────────────────────────────
+   Las gráficas 3D son un complemento visual, nunca la única forma
+   de ver los datos: por accesibilidad, cada gráfica 2D (Chart.js)
+   sigue siendo la vista por defecto, con sus valores disponibles
+   como texto (KPIs, tooltips, exportación a CSV). El botón "3D"
+   alterna a una vista adicional, no sustituye la accesible.
+   Las librerías (~1.7 MB) solo se descargan la primera vez que el
+   usuario realmente pide ver una gráfica en 3D — nunca en la carga
+   inicial de la página.
+══════════════════════════════════════════════════════════════ */
+
+let _echartsCargando = null;
+const _echarts3D = { ventas: null, inventario: null }; // instancias activas por gráfica
+
+function cargarScript_(src, integrity) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    if (integrity) { script.integrity = integrity; script.crossOrigin = 'anonymous'; }
+    script.onload = resolve;
+    script.onerror = () => reject(new Error('No se pudo cargar ' + src));
+    document.head.appendChild(script);
+  });
+}
+
+/** Carga ECharts + ECharts-GL una sola vez (llamadas repetidas reusan la misma promesa). */
+function cargarECharts_() {
+  if (window.echarts) return Promise.resolve();
+  if (_echartsCargando) return _echartsCargando;
+  _echartsCargando = cargarScript_(
+    'https://cdn.jsdelivr.net/npm/echarts@6.1.0/dist/echarts.min.js',
+    'sha384-C2iskrW/uPW46KzOjrvJIQo4YkV8lkD+QS0CrDN18IIPIpT/g2USu8bTP3nvmIAD'
+  ).then(() => cargarScript_(
+    'https://cdn.jsdelivr.net/npm/echarts-gl@2.1.0/dist/echarts-gl.min.js',
+    'sha384-RSPZ3vSNVFJnUBsUVMnD0qizvywfxO1bcpIeS9dg5sseJ+Daf08BIyMCZMX+rmLl'
+  )).catch(err => { _echartsCargando = null; throw err; });
+  return _echartsCargando;
+}
+
+/** Muestra/oculta la gráfica 3D de "nombre" ('ventas' o 'inventario'), cargando ECharts si hace falta. */
+async function toggleGrafica3D(nombre) {
+  const canvasWrap = document.getElementById(`chart-${nombre}-2d-wrap`);
+  const contenedor3D = document.getElementById(`chart-${nombre}-3d`);
+  const boton = document.getElementById(`btn-3d-${nombre}`);
+  if (!canvasWrap || !contenedor3D || !boton) return;
+
+  const activando = contenedor3D.classList.contains('hidden');
+  if (!activando) {
+    contenedor3D.classList.add('hidden');
+    canvasWrap.classList.remove('hidden');
+    boton.classList.remove('activo');
+    return;
+  }
+
+  boton.disabled = true;
+  try {
+    await cargarECharts_();
+    canvasWrap.classList.add('hidden');
+    contenedor3D.classList.remove('hidden');
+    boton.classList.add('activo');
+    // Esperar a que el navegador termine el layout tras quitar "hidden":
+    // ECharts-GL mide el contenedor al inicializar, y si lo hace en el mismo
+    // instante en que pasa de display:none a visible, a veces todavía lee
+    // tamaño cero y falla al compilar los shaders de luz/sombra (sin lanzar
+    // un error visible, simplemente no crea el <canvas>). Se usa
+    // setTimeout en vez de requestAnimationFrame porque rAF se suspende por
+    // completo en pestañas en segundo plano (document.hidden) y podría no
+    // disparar nunca si el usuario cambia de pestaña justo después de hacer
+    // clic; setTimeout sigue ejecutándose (aunque con más retraso) en ese caso.
+    await new Promise(r => setTimeout(r, 50));
+    actualizarGrafica3DSiVisible(nombre);
+  } catch (err) {
+    showToast('No se pudo cargar la vista 3D (revisa tu conexión)', 'error');
+  } finally {
+    boton.disabled = false;
+  }
+}
+
+/** Si la gráfica 3D de "nombre" está visible, la redibuja con los datos más recientes. */
+function actualizarGrafica3DSiVisible(nombre, _reintento) {
+  const contenedor = document.getElementById(`chart-${nombre}-3d`);
+  if (!contenedor || contenedor.classList.contains('hidden') || !window.echarts) return;
+
+  const datosGrafica =
+    nombre === 'ventas'      ? STATE._ultimaGraficaVentas :
+    nombre === 'inventario'  ? STATE._ultimaGraficaInventario : null;
+  if (!datosGrafica) return;
+
+  const config = nombre === 'ventas'
+    ? ['Ingresos', PALETA.azulMedio, PALETA.turquesa, v => formatMoney(v)]
+    : ['Unidades en stock', PALETA.turquesaOscuro, PALETA.amarillo, v => `${v} u.`];
+  dibujarBarras3D_(contenedor, nombre, datosGrafica.labels, datosGrafica.datos, ...config);
+
+  // La primera vez que se crea la instancia en una pestaña recién cargada,
+  // ECharts-GL a veces no llega a pintar el <canvas> WebGL en el primer
+  // intento (parece una condición de carrera interna de la librería, no
+  // reproducible de forma determinista). Reintentar tras una pausa lo
+  // resuelve en la mayoría de los casos. Si tras varios intentos sigue sin
+  // aparecer (p. ej. WebGL no disponible en ese equipo/navegador), se
+  // muestra un aviso claro en vez de dejar una caja en blanco.
+  setTimeout(() => {
+    const c = document.getElementById(`chart-${nombre}-3d`);
+    if (!c || c.classList.contains('hidden') || c.querySelector('canvas')) return;
+    const siguiente = (_reintento || 0) + 1;
+    if (siguiente <= 2) {
+      actualizarGrafica3DSiVisible(nombre, siguiente);
+    } else {
+      mostrarFallback3D_(c, nombre);
+    }
+  }, 1500);
+}
+
+/** Muestra un aviso accesible cuando la vista 3D no puede renderizarse (sin WebGL, GPU no compatible, etc.). */
+function mostrarFallback3D_(contenedor, nombre) {
+  if (_echarts3D[nombre]) {
+    try { _echarts3D[nombre].dispose(); } catch (_e) { /* instancia ya rota, ignorar */ }
+    _echarts3D[nombre] = null;
+  }
+  contenedor.innerHTML = `
+    <div class="grafica-3d-fallback">
+      <p>No se pudo mostrar la vista 3D en este dispositivo o navegador.</p>
+      <button type="button" class="btn-outline btn-sm" onclick="toggleGrafica3D('${nombre}')">Volver a la vista 2D</button>
+    </div>`;
+}
+
+/** Dibuja (o redibuja) una gráfica de barras 3D genérica dentro de `contenedor`. */
+function dibujarBarras3D_(contenedor, clave, labels, datos, nombreSerie, colorBase, colorDestacado, formatoValor) {
+  if (!window.echarts) return;
+  const modoOscuro = document.body.classList.contains('dark');
+  const colorTexto = modoOscuro ? '#9ab0c8' : PALETA.grisLabel;
+
+  const esNueva = !_echarts3D[clave];
+  if (esNueva) {
+    // Inicializar ECharts-GL directamente sobre el <div> tal cual lo dejó el
+    // parser HTML al cargar la página falla de forma reproducible al
+    // compilar shaders 3D ("Invalid expression") con esta combinación de
+    // GPU/controlador — comprobado exhaustivamente. Un clon exacto del mismo
+    // nodo (mismo id, mismas clases) sí funciona siempre, así que se
+    // reemplaza el nodo original por un clon antes de inicializar. Como el
+    // resto del código siempre vuelve a pedir el contenedor con
+    // getElementById en cada llamada (nunca guarda la referencia vieja),
+    // este cambio es transparente para el resto de la función.
+    const clon = contenedor.cloneNode(false);
+    contenedor.replaceWith(clon);
+    contenedor = clon;
+    const nodoInterno = document.createElement('div');
+    nodoInterno.style.width = '100%';
+    nodoInterno.style.height = '100%';
+    contenedor.appendChild(nodoInterno);
+    _echarts3D[clave] = echarts.init(nodoInterno, null, { renderer: 'canvas' });
+  }
+  const maximo = Math.max(1, ...datos);
+  const data3D = datos.map((v, i) => ({
+    value: [i, 0, v],
+    itemStyle: { color: v === maximo ? colorDestacado : colorBase },
+  }));
+
+  _echarts3D[clave].setOption({
+    animation: !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    tooltip: {
+      formatter: p => p.value ? `${labels[p.value[0]]}<br/>${nombreSerie}: <b>${formatoValor(p.value[2])}</b>` : '',
+    },
+    xAxis3D: { type: 'category', data: labels, axisLabel: { color: colorTexto, fontSize: 10, interval: 0, rotate: labels.length > 8 ? 30 : 0 } },
+    yAxis3D: { type: 'category', data: [nombreSerie], axisLabel: { show: false } },
+    zAxis3D: { type: 'value', axisLabel: { color: colorTexto, fontSize: 10 } },
+    grid3D: {
+      boxWidth: 100, boxHeight: 55, boxDepth: 35,
+      viewControl: { alpha: 22, beta: 25, distance: 155, autoRotate: false },
+      // Sin configuración explícita de "light": en algunas GPU/controladores
+      // (comprobado con AMD Vega vía ANGLE/D3D11) personalizar la luz aquí
+      // hace que ECharts-GL falle al compilar los shaders ("Invalid
+      // expression") y la gráfica 3D nunca aparece. shading:'lambert' en la
+      // serie ya da una iluminación razonable con la luz por defecto.
+    },
+    series: [{
+      type: 'bar3D',
+      data: data3D,
+      shading: 'lambert',
+      barSize: labels.length > 10 ? 4 : 8,
+      bevelSize: 0.3,
+    }],
+  });
+
+  // El observer de tamaño se conecta DESPUÉS del primer setOption — llamar
+  // a resize() en una instancia 3D que todavía no tiene series configuradas
+  // deja a ECharts-GL en un estado roto (lanza "Invalid expression" al
+  // compilar sombreadores) y ya nunca vuelve a crear el <canvas> WebGL.
+  if (esNueva) {
+    new ResizeObserver(() => _echarts3D[clave] && _echarts3D[clave].resize()).observe(contenedor);
+  }
+}
+
 // Genera badge HTML de tendencia (+12% / -5%)
 function tendenciaBadge(pct) {
   if (pct === null || isNaN(pct)) return '';
   const sube  = pct >= 0;
-  const color = sube ? '#4CAF50' : '#E53935';
+  const color = sube ? PALETA.verdeTexto : PALETA.rojoTexto;
   const icono = sube ? '▲' : '▼';
   return ` <span style="font-size:.68rem;font-weight:700;color:${color};margin-left:.3rem;">${icono} ${Math.abs(pct)}%</span>`;
 }
@@ -6157,6 +6428,7 @@ function renderInventario(lista = STATE.inventario) {
   setHTML('inv-kpi-stock', totalStock);
   setHTML('inv-kpi-bajo',  bajosStock + agotados);
   setHTML('inv-kpi-valor', formatMoney(valorTotal));
+  renderGraficaInventario();
 
   // Badge en sidebar — siempre basado en el inventario COMPLETO, no la lista filtrada
   const badge = document.getElementById('badge-stock');
