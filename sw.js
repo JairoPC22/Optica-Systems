@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE = 'aurora-v9.1';
+const CACHE = 'aurora-v10';
 const SHELL = [
   './',
   './index.html',
@@ -8,13 +8,16 @@ const SHELL = [
   './styles.css',
   './Logo-optica.ico',
   './manifest.json',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/icon-512-maskable.png',
 ];
 
 // Recursos externos que queremos cachear para offline
 const CDN_PRECACHE = [
   'https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap',
-  'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js',
-  'https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js',
+  'https://cdn.jsdelivr.net/npm/@emailjs/browser@4.4.1/dist/email.min.js',
+  'https://cdn.jsdelivr.net/npm/feather-icons@4.29.2/dist/feather.min.js',
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js',
 ];
 

@@ -14,13 +14,25 @@ html.dark-preload body {
   --azul-medio:    #2E5C8A;
   --azul-claro:    #6FA9C9;
   --turquesa:      #4FC3C7;
-  --turquesa-dark: #38a8ac;
+  /* --turquesa-dark se usa como TEXTO/ícono sobre fondos claros en decenas de
+     componentes (tabs, badges, KPIs, encabezados ordenables...). El valor
+     original (#38a8ac) solo daba 2.85:1 sobre blanco — falla WCAG AA. Se
+     oscurece aquí para modo claro; en modo oscuro se restaura el valor
+     original más claro más abajo (body.dark), donde sí funciona bien sobre
+     fondos oscuros. */
+  --turquesa-dark: #297a7d;
+  /* Variante fija (no cambia con el tema) usada SOLO como extremo de
+     gradiente en botones/avatares con texto blanco encima: el turquesa base
+     (#4FC3C7) da apenas 2.1:1 de contraste con blanco. */
+  --turquesa-boton: #297a7d;
   --blanco:        #FFFFFF;
   --gris-claro:    #F4F6F8;
   --gris-medio:    #B0BEC5;
   --gris-borde:    #DDE3EA;
   --gris-texto:    #5A6A7E;
-  --gris-label:    #8A9BB0;
+  /* #8A9BB0 original solo llegaba a 2.84:1 sobre blanco (falla WCAG AA para
+     texto normal). Se oscurece a 4.7:1 manteniendo el mismo matiz. */
+  --gris-label:    #64758C;
 
   --verde:         #4CAF50;
   --verde-bg:      #E8F5E9;
@@ -28,6 +40,14 @@ html.dark-preload body {
   --rojo-bg:       #FFEBEE;
   --amarillo:      #FBC02D;
   --amarillo-bg:   #FFF8E1;
+  /* Variantes oscurecidas de verde/rojo/amarillo para USO COMO TEXTO — los
+     tonos "vivos" de arriba están pensados para rellenos de icono/fondo y no
+     alcanzan 4.5:1 de contraste como texto (verde 2.78:1, rojo 4.23:1,
+     amarillo 1.66:1 sobre blanco). Úsense estas variantes en cualquier lugar
+     donde el color transmita texto legible (montos, badges, etiquetas). */
+  --verde-texto:    #2E7D32;
+  --rojo-texto:     #C62828;
+  --amarillo-texto: #8a6d00;
 
   --sidebar-w:     260px;
   --topbar-h:      64px;
@@ -81,6 +101,29 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 3px rgba(79,195,199,.15);
 }
 textarea { resize: vertical; min-height: 70px; }
+
+/* Foco visible por teclado en todo elemento interactivo (botones, tabs,
+   enlaces de navegación...). Antes solo los <input> tenían anillo de foco;
+   el resto dependía del outline por defecto del navegador, poco visible
+   sobre fondos de color. Se usa :focus-visible para no mostrar el anillo
+   en clics de mouse, solo en navegación real por teclado. */
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--turquesa);
+  outline-offset: 2px;
+  border-radius: var(--radius);
+}
+
+/* Respeta la preferencia del sistema de reducir animaciones. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238A9BB0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right .8rem center; padding-right: 2rem; }
 
 .hidden { display: none !important; }
@@ -135,7 +178,6 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   gap: 1rem;
   margin-bottom: .5rem;
 }
-.logo-icon svg { width: 52px; }
 .logo-text { display: flex; flex-direction: column; line-height: 1; }
 .logo-optica {
   font-size: .75rem;
@@ -212,7 +254,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 .btn-login {
   width: 100%;
   padding: .85rem;
-  background: linear-gradient(135deg, var(--azul-medio), var(--turquesa));
+  background: linear-gradient(135deg, var(--azul-medio), var(--turquesa-boton));
   color: var(--blanco);
   border-radius: var(--radius);
   font-size: .95rem;
@@ -344,7 +386,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 }
 .user-avatar {
   width: 38px; height: 38px;
-  background: linear-gradient(135deg, var(--turquesa), var(--azul-claro));
+  background: linear-gradient(135deg, var(--azul-medio), var(--turquesa-boton));
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -513,7 +555,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 }
 .topbar-avatar {
   width: 32px; height: 32px;
-  background: linear-gradient(135deg, var(--turquesa), var(--azul-claro));
+  background: linear-gradient(135deg, var(--azul-medio), var(--turquesa-boton));
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -563,7 +605,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   align-items: center;
   gap: .45rem;
   padding: .6rem 1.2rem;
-  background: linear-gradient(135deg, var(--azul-medio), var(--turquesa));
+  background: linear-gradient(135deg, var(--azul-medio), var(--turquesa-boton));
   color: var(--blanco);
   border-radius: var(--radius);
   font-size: .85rem;
@@ -573,6 +615,15 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   white-space: nowrap;
 }
 .btn-primary:hover { opacity: .88; transform: translateY(-1px); box-shadow: 0 5px 14px rgba(46,92,138,.32); }
+.btn-primary:disabled,
+.btn-outline:disabled,
+.btn-danger:disabled,
+.btn-sm:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
 .btn-primary svg { width: 15px; height: 15px; }
 
 .btn-outline {
@@ -648,7 +699,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 .kpi-icon svg { width: 22px; height: 22px; }
 .kpi-blue .kpi-icon  { background: rgba(46,92,138,.1); color: var(--azul-medio); }
 .kpi-teal .kpi-icon  { background: rgba(79,195,199,.12); color: var(--turquesa-dark); }
-.kpi-green .kpi-icon { background: var(--verde-bg); color: var(--verde); }
+.kpi-green .kpi-icon { background: var(--verde-bg); color: var(--verde-texto); }
 .kpi-red .kpi-icon   { background: var(--rojo-bg); color: var(--rojo); }
 
 .kpi-value {
@@ -783,9 +834,9 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   font-weight: 600;
   white-space: nowrap;
 }
-.badge-green  { background: var(--verde-bg);   color: var(--verde); }
-.badge-red    { background: var(--rojo-bg);    color: var(--rojo); }
-.badge-yellow { background: var(--amarillo-bg); color: #b8860b; }
+.badge-green  { background: var(--verde-bg);   color: var(--verde-texto); }
+.badge-red    { background: var(--rojo-bg);    color: var(--rojo-texto); }
+.badge-yellow { background: var(--amarillo-bg); color: var(--amarillo-texto); }
 .badge-blue   { background: rgba(46,92,138,.1); color: var(--azul-medio); }
 .badge-gray   { background: var(--gris-claro); color: var(--gris-texto); }
 
@@ -811,7 +862,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 .btn-action.edit:hover  { background: rgba(46,92,138,.1); color: var(--azul-medio); }
 .btn-action.delete:hover { background: var(--rojo-bg); color: var(--rojo); }
 .btn-action.view:hover  { background: rgba(79,195,199,.12); color: var(--turquesa-dark); }
-.btn-action.pay:hover   { background: var(--verde-bg); color: var(--verde); }
+.btn-action.pay:hover   { background: var(--verde-bg); color: var(--verde-texto); }
 .btn-action.email:hover { background: var(--amarillo-bg); color: #b8860b; }
 
 /* ── FILTER TABS ── */
@@ -979,7 +1030,10 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 }
 .confirm-icon svg {
   width: 48px; height: 48px;
-  color: var(--amarillo);
+  /* --amarillo (#FBC02D) da 1.66:1 sobre blanco — invisible como ícono de
+     alerta. Se usa un ámbar más oscuro que sí cumple el mínimo de 3:1 para
+     objetos gráficos (WCAG 1.4.11) sin perder la connotación de advertencia. */
+  color: #a67c00;
 }
 .confirm-text {
   text-align: center;
@@ -1039,8 +1093,8 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 }
 .balance-label { font-size: .72rem; color: var(--gris-label); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .3rem; }
 .balance-value { font-size: 1.1rem; font-weight: 700; font-family: var(--font-mono); color: var(--azul-oscuro); }
-.text-green { color: var(--verde) !important; }
-.text-red   { color: var(--rojo) !important; }
+.text-green { color: var(--verde-texto) !important; }
+.text-red   { color: var(--rojo-texto) !important; }
 
 /* ── CLÍNICA ── */
 .clinica-section {
@@ -1177,7 +1231,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 .btn-email svg { width: 15px; height: 15px; }
 .btn-email-thanks {
   background: rgba(76,175,80,.08);
-  color: var(--verde);
+  color: var(--verde-texto);
   border-color: rgba(76,175,80,.2);
 }
 .btn-email-thanks:hover { background: var(--verde); color: var(--blanco); }
@@ -1189,8 +1243,8 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   font-size: .83rem;
   font-weight: 500;
 }
-.email-status.success { background: var(--verde-bg); color: var(--verde); }
-.email-status.error   { background: var(--rojo-bg); color: var(--rojo); }
+.email-status.success { background: var(--verde-bg); color: var(--verde-texto); }
+.email-status.error   { background: var(--rojo-bg); color: var(--rojo-texto); }
 
 /* ── HISTORIAL CLÍNICO DETALLE ── */
 .historial-card {
@@ -1332,7 +1386,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 
 /* ── TIPO VENTA BADGES ── */
 .tipo-normal   { background: rgba(46,92,138,.1);  color: var(--azul-medio); }
-.tipo-garantia { background: var(--verde-bg);    color: var(--verde); }
+.tipo-garantia { background: var(--verde-bg);    color: var(--verde-texto); }
 .tipo-cambio   { background: var(--amarillo-bg); color: #b8860b; }
 
 /* ── AUDITORIA BADGES ── */
@@ -1344,13 +1398,13 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   text-transform: uppercase;
   letter-spacing: .05em;
 }
-.accion-Crear    { background: var(--verde-bg); color: var(--verde); }
+.accion-Crear    { background: var(--verde-bg); color: var(--verde-texto); }
 .accion-Editar   { background: rgba(46,92,138,.1); color: var(--azul-medio); }
-.accion-Eliminar { background: var(--rojo-bg); color: var(--rojo); }
-.accion-Pago     { background: rgba(79,195,199,.12); color: var(--turquesa-dark); }
-.accion-Cambio   { background: var(--amarillo-bg); color: #b8860b; }
-.accion-Garantia { background: var(--verde-bg); color: #2e7d32; }
-.accion-Garantía { background: var(--verde-bg); color: #2e7d32; }
+.accion-Eliminar { background: var(--rojo-bg); color: var(--rojo-texto); }
+.accion-Pago     { background: rgba(79,195,199,.12); color: var(--turquesa-boton); }
+.accion-Cambio   { background: var(--amarillo-bg); color: var(--amarillo-texto); }
+.accion-Garantia { background: var(--verde-bg); color: var(--verde-texto); }
+.accion-Garantía { background: var(--verde-bg); color: var(--verde-texto); }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 768px) {
@@ -1500,11 +1554,6 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
     height: 38px;
   }
 
-  /* empty-row ocupa todo el ancho */
-  .table tbody tr.empty-tr {
-    margin: .6rem;
-    width: calc(100% - 1.2rem);
-  }
   .empty-row {
     justify-content: center;
   }
@@ -1622,6 +1671,12 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   border: 1px solid rgba(79,195,199,.25);
   padding: .2rem .75rem;
   border-radius: 99px;
+  display: flex;
+  align-items: center;
+  gap: .2rem;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  max-width: 220px;
 }
 
 .grafica-wrap {
@@ -1718,15 +1773,6 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
     flex-direction: column;
     align-items: flex-start;
   }
-}
-/* Tendencia badge en KPI de gráfica */
-.grafica-kpi {
-  display: flex;
-  align-items: center;
-  gap: .2rem;
-  flex-wrap: nowrap;
-  white-space: nowrap;
-  max-width: 220px;
 }
 /* ── REVISIÓN ANUAL ── */
 .revision-alerta {
@@ -1857,6 +1903,10 @@ body.dark {
   --gris-label:  #6a8aaa;
   --gris-medio:  #4a6a8a;
   --azul-oscuro: #e2eaf4;
+  /* En modo oscuro el turquesa oscurecido (#297a7d, usado para pasar 4.5:1
+     sobre fondos claros) pierde contraste sobre los fondos oscuros de la
+     interfaz; se restaura el tono original más claro, que sí funciona aquí. */
+  --turquesa-dark: #38a8ac;
 }
 
 body.dark .sidebar        { background: #0d1826; border-right: 1px solid #1e2d3d; }
@@ -1971,7 +2021,6 @@ body.dark .diagnostico-text { background: #131f2e; border-color: #2a3f55; color:
   }
 }
 
-body.dark .topbar::before { background: #1e2d3d; }
 body.sidebar-collapsed .topbar { left: 68px; }
 /* ── FONDO BASE html ── */
 html {
@@ -2009,21 +2058,6 @@ html:has(body.dark.sidebar-collapsed) {
   }
   html:has(body.dark),
   html:has(body.dark.sidebar-collapsed) {
-    background: #131f2e;
-  }
-}
-html:has(body.dark) {
-  background: linear-gradient(
-    to right,
-    #0d1826 var(--sidebar-w),
-    #131f2e var(--sidebar-w)
-  );
-}
-@media (max-width: 768px) {
-  html {
-    background: var(--gris-claro);
-  }
-  html:has(body.dark) {
     background: #131f2e;
   }
 }

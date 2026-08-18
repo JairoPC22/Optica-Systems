@@ -1,0 +1,14 @@
+# Sistema operativo / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.log
+
+# Configuración local o credenciales que nunca deben subirse al repositorio
+.env
+.env.*
+*.local
+
+# Herramientas de despliegue de Apps Script (clasp) — credenciales, no código
+.clasprc.json
+.clasp.json
