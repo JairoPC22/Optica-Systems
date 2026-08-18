@@ -1,0 +1,1660 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/x-icon" href="Logo-optica.ico" />
+  <meta http-equiv="Content-Security-Policy" 
+        content="script-src * 'unsafe-inline' 'unsafe-eval'; connect-src *;">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Óptica Aurora — Sistema Interno</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1F3A5F">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Óptica Aurora">
+  <link rel="apple-touch-icon" href="Logo-optica.ico">
+  <script>
+  if (localStorage.getItem('aurora_dark') === '1') {
+    document.documentElement.classList.add('dark-preload');
+  }
+</script>
+<link rel="stylesheet" href="styles.css" />
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- EmailJS -->
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <!-- Icons (Feather) -->
+<script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- ============================================================
+       🔐 PANTALLA DE LOGIN
+  ============================================================ -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-bg-shapes">
+      <div class="shape shape-1"></div>
+      <div class="shape shape-2"></div>
+      <div class="shape shape-3"></div>
+    </div>
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="logo-icon">
+  <img src="Logo-optica.ico" alt="Óptica Aurora" style="width:52px;height:52px;object-fit:contain;" />
+</div>
+        <div class="logo-text">
+          <span class="logo-optica">ÓPTICA</span>
+          <span class="logo-aurora">AURORA</span>
+        </div>
+      </div>
+      <p class="login-subtitle">Sistema de Gestión Interno</p>
+      <form id="login-form" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label for="login-user">Usuario</label>
+          <div class="input-icon-wrap">
+            <i data-feather="user" class="input-icon"></i>
+            <input type="text" id="login-user" placeholder="Tu usuario" autocomplete="off" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="login-pass">Contraseña</label>
+          <div class="input-icon-wrap">
+            <i data-feather="lock" class="input-icon"></i>
+            <input type="password" id="login-pass" placeholder="••••••••" required />
+            <button type="button" class="toggle-pass" onclick="togglePassword()">
+              <i data-feather="eye" id="pass-eye"></i>
+            </button>
+          </div>
+        </div>
+        <div id="login-error" class="login-error hidden">
+          <i data-feather="alert-circle"></i>
+          <span>Usuario o contraseña incorrectos.</span>
+        </div>
+        <button type="submit" class="btn-login" id="login-btn">
+          <span id="login-btn-text">Ingresar al Sistema</span>
+          <span id="login-spinner" class="spinner hidden"></span>
+        </button>
+      </form>
+      <p class="login-footer">Solo personal autorizado · Óptica Aurora © 2025</p>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       🏠 APLICACIÓN PRINCIPAL (oculta hasta login)
+  ============================================================ -->
+  <div id="app" class="app hidden">
+
+    <!-- ── SIDEBAR ── -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+<img src="Logo-optica.ico" alt="Óptica Aurora" 
+     style="width:44px; height:44px; border-radius:8px; object-fit:contain;" />
+<div>
+  <div class="sidebar-brand">ÓPTICA</div>
+  <div class="sidebar-brand-bold">AURORA</div>
+</div>
+        </div>
+        <button class="sidebar-toggle" onclick="toggleSidebar()" title="Cerrar menú">
+          <i data-feather="chevrons-left"></i>
+        </button>
+      </div>
+
+      <div class="sidebar-user-card">
+        <div class="user-avatar" id="sidebar-avatar">JD</div>
+        <div class="user-info">
+          <div class="user-name" id="sidebar-username">Cargando...</div>
+          <div class="user-role" id="sidebar-role">—</div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-label">PRINCIPAL</div>
+        <button class="nav-item active" onclick="navigateTo('dashboard')" data-section="dashboard">
+          <i data-feather="grid"></i>
+          <span>Dashboard</span>
+        </button>
+        <button class="nav-item" onclick="navigateTo('clientes')" data-section="clientes">
+          <i data-feather="users"></i>
+          <span>Clientes</span>
+        </button>
+
+        <div class="nav-section-label">CLÍNICO</div>
+        <button class="nav-item" onclick="navigateTo('historial')" data-section="historial">
+          <i data-feather="eye"></i>
+          <span>Historial Clínico</span>
+        </button>
+
+        <div class="nav-section-label">FINANZAS</div>
+        <button class="nav-item" onclick="navigateTo('ventas')" data-section="ventas">
+          <i data-feather="shopping-bag"></i>
+          <span>Ventas</span>
+        </button>
+        <button class="nav-item" onclick="navigateTo('pagos')" data-section="pagos">
+          <i data-feather="credit-card"></i>
+          <span>Pagos</span>
+        </button>
+        <button class="nav-item" onclick="navigateTo('adeudos')" data-section="adeudos">
+          <i data-feather="alert-triangle"></i>
+          <span>Adeudos</span>
+          <span class="nav-badge" id="badge-adeudos">0</span>
+        </button>
+
+        <div class="nav-section-label">SERVICIO</div>
+        <button class="nav-item" onclick="navigateTo('garantias')" data-section="garantias">
+          <i data-feather="refresh-cw"></i>
+          <span>Garantías y Cambios</span>
+        </button>
+
+        <div class="nav-section-label">INVENTARIO</div>
+        <button class="nav-item" onclick="navigateTo('inventario')" data-section="inventario">
+          <i data-feather="package"></i>
+          <span>Inventario</span>
+          <span class="nav-badge" id="badge-stock" style="background:var(--amarillo);color:#333">0</span>
+        </button>
+
+        <div class="nav-section-label">SISTEMA</div>
+        <button class="nav-item" id="nav-item-auditoria" onclick="navigateTo('auditoria')" data-section="auditoria">
+          <i data-feather="activity"></i>
+          <span>Auditoría</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="btn-logout" onclick="handleLogout()">
+          <i data-feather="log-out"></i>
+          <span>Cerrar sesión</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ── CONTENIDO PRINCIPAL ── -->
+    <main class="main-content" id="main-content">
+
+<!-- TOPBAR -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="btn-icon" onclick="toggleSidebar()" title="Menú">
+            <i data-feather="menu"></i>
+          </button>
+          <div class="breadcrumb">
+            <span id="breadcrumb-section">Dashboard</span>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <div class="topbar-date" id="topbar-date"></div>
+          <button class="btn-icon" id="btn-dark-mode" onclick="toggleDarkMode()" title="Modo oscuro">
+            <i data-feather="moon" id="icon-dark"></i>
+          </button>
+          <div class="topbar-user">
+            <div class="topbar-avatar" id="topbar-avatar">JD</div>
+            <span id="topbar-username">Usuario</span>
+          </div>
+        </div>
+      </header>
+      <div id="offline-indicator" class="offline-badge" style="display:none;"></div>
+      <!-- ══════════════════════════════════════════════
+           📊 SECCIÓN: DASHBOARD
+      ══════════════════════════════════════════════ -->
+      <section id="section-dashboard" class="section active">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">Dashboard</h1>
+            <p class="section-desc">Resumen general del sistema</p>
+          </div>
+          <div style="display:flex;gap:.6rem;">
+          <button id="btn-reporte-pdf" class="btn-outline" onclick="generarReportePDF()">
+            <i data-feather="file-text"></i> Reporte PDF <span id="reporte-periodo-label" style="font-weight:400;font-size:.76rem;opacity:.7;margin-left:.1rem"></span>
+          </button>
+            <button class="btn-primary" onclick="refreshDashboard()">
+              <i data-feather="refresh-cw"></i> Actualizar
+            </button>
+          </div>
+        </div>
+
+<!-- ALERTAS DE REVISIÓN ANUAL -->
+        <div id="revision-anual-alerta" class="revision-alerta hidden">
+          <div class="revision-header">
+            <div class="revision-icon">📅</div>
+            <div>
+              <div class="revision-title">Clientes que necesitan revisión anual</div>
+              <div class="revision-sub">Llevan más de 11 meses desde su última compra de lentes</div>
+            </div>
+            <button class="btn-sm" onclick="toggleRevisionDetalle()">Ver lista</button>
+          </div>
+          <div id="revision-detalle" class="revision-detalle hidden"></div>
+        </div>
+
+        <!-- FILTRO DE PERÍODO PARA KPIs -->
+<div class="kpi-periodo-bar">
+          <div class="kpi-periodo-tabs" id="kpi-periodo-tabs">
+            <button class="kpi-periodo-tab active" onclick="cambiarPeriodoKpi('mes', this)">Este mes</button>
+            <button class="kpi-periodo-tab" onclick="cambiarPeriodoKpi('semana', this)">Esta semana</button>
+            <button class="kpi-periodo-tab" onclick="cambiarPeriodoKpi('año', this)">Este año</button>
+            <button class="kpi-periodo-tab" onclick="cambiarPeriodoKpi('total', this)">Total histórico</button>
+          </div>
+          <div class="kpi-periodo-custom">
+            <input type="month" id="kpi-mes-custom" class="select-sm" style="font-size:.78rem;min-width:140px;" oninput="cambiarPeriodoKpiMes(this.value)" title="Seleccionar mes específico" />
+          </div>
+          <div id="dash-empleado-wrap" class="hidden">
+            <select id="filter-empleado-dash" class="select-sm" onchange="cambiarFiltroEmpleadoDash(this.value)" style="min-width:190px;font-size:.78rem;">
+              <option value="">👤 Todos los empleados</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card kpi-blue">
+            <div class="kpi-icon"><i data-feather="users"></i></div>
+            <div class="kpi-data">
+              <div class="kpi-value" id="kpi-clientes">—</div>
+              <div class="kpi-label">Clientes con venta</div>
+            </div>
+          </div>
+          <div class="kpi-card kpi-teal">
+            <div class="kpi-icon"><i data-feather="shopping-bag"></i></div>
+            <div class="kpi-data">
+              <div class="kpi-value" id="kpi-ventas">—</div>
+              <div class="kpi-label">Total Vendido</div>
+            </div>
+          </div>
+          <div class="kpi-card kpi-green">
+            <div class="kpi-icon"><i data-feather="check-circle"></i></div>
+            <div class="kpi-data">
+              <div class="kpi-value" id="kpi-pagados">—</div>
+              <div class="kpi-label">Cuentas Pagadas</div>
+            </div>
+          </div>
+          <div class="kpi-card kpi-red">
+            <div class="kpi-icon"><i data-feather="alert-circle"></i></div>
+            <div class="kpi-data">
+              <div class="kpi-value" id="kpi-pendiente">—</div>
+              <div class="kpi-label">Total Pendiente</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dashboard tables -->
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="card-header">
+              <h3>Clientes con Adeudo</h3>
+              <button class="btn-sm" onclick="navigateTo('adeudos')">Ver todos</button>
+            </div>
+            <div class="table-wrap">
+              <table class="table" id="dash-adeudos-table">
+                <thead>
+                  <tr>
+                    <th>Cliente</th>
+                    <th>Teléfono</th>
+                    <th>Adeudo</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody id="dash-adeudos-body">
+                  <tr><td colspan="4" class="empty-row">Cargando...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3>Actividad Reciente</h3>
+              <button class="btn-sm" onclick="navigateTo('auditoria')">Ver todo</button>
+            </div>
+            <div id="dash-activity-list" class="activity-list">
+              <div class="empty-row">Cargando actividad...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- GRÁFICAS DE VENTAS -->
+        <div class="graficas-header">
+          <div>
+            <h2 class="section-title" style="font-size:1.1rem">Análisis de Ventas</h2>
+            <p class="section-desc">Evolución de ingresos y actividad</p>
+          </div>
+          <div style="display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;">
+          <div class="graficas-tabs" id="graficas-tabs">
+            <button class="grafica-tab active" onclick="cambiarPeriodo('semana', this)">Semana</button>
+            <button class="grafica-tab" onclick="cambiarPeriodo('mes', this)">30 días</button>
+            <button class="grafica-tab" onclick="cambiarPeriodo('año', this)">Año</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;">
+            <input type="date" id="dash-fecha-desde" class="select-sm" style="min-width:130px;font-size:.78rem;" 
+              oninput="aplicarRangoPersonalizado()" title="Desde" />
+            <span style="color:var(--gris-label);font-size:.8rem;">—</span>
+            <input type="date" id="dash-fecha-hasta" class="select-sm" style="min-width:130px;font-size:.78rem;" 
+              oninput="aplicarRangoPersonalizado()" title="Hasta" />
+            <button class="btn-sm" onclick="limpiarRangoPersonalizado()" title="Limpiar rango">✕</button>
+          </div>
+        </div>
+        </div>
+
+        <div class="graficas-grid">
+          <!-- Gráfica principal: ingresos -->
+          <div class="card grafica-card grafica-card-wide">
+            <div class="card-header">
+              <h3>Ingresos por período</h3>
+              <div class="grafica-kpi" id="grafica-kpi-total">—</div>
+            </div>
+            <div class="grafica-wrap">
+              <canvas id="chart-ventas"></canvas>
+            </div>
+          </div>
+
+          <!-- Gráfica: estado de cuentas -->
+          <div class="card grafica-card">
+            <div class="card-header">
+              <h3>Estado de Cuentas</h3>
+            </div>
+            <div class="grafica-wrap grafica-wrap-donut">
+              <canvas id="chart-estados"></canvas>
+            </div>
+            <div class="donut-leyenda" id="donut-leyenda"></div>
+          </div>
+
+          <!-- Gráfica: número de ventas -->
+          <div class="card grafica-card">
+            <div class="card-header">
+              <h3>Número de Ventas</h3>
+              <div class="grafica-kpi" id="grafica-kpi-ventas">—</div>
+            </div>
+            <div class="grafica-wrap">
+              <canvas id="chart-num-ventas"></canvas>
+            </div>
+          </div>
+
+          <!-- Mini KPIs de métricas -->
+          <div class="card grafica-card grafica-card-wide">
+            <div class="card-header"><h3>Métricas del Período</h3></div>
+            <div class="metricas-grid" id="metricas-grid">
+              <div class="metrica-item">
+                <div class="metrica-valor" id="m-promedio">—</div>
+                <div class="metrica-label">Ticket Promedio</div>
+              </div>
+              <div class="metrica-item">
+                <div class="metrica-valor" id="m-cobrado">—</div>
+                <div class="metrica-label">Total Cobrado</div>
+              </div>
+              <div class="metrica-item">
+                <div class="metrica-valor" id="m-pendiente-periodo">—</div>
+                <div class="metrica-label">Pendiente Generado</div>
+              </div>
+              <div class="metrica-item">
+                <div class="metrica-valor" id="m-garantias">—</div>
+                <div class="metrica-label">Garantías / Cambios</div>
+              </div>
+              <div class="metrica-item">
+                <div class="metrica-valor" id="m-nuevos-clientes">—</div>
+                <div class="metrica-label">Clientes Nuevos</div>
+              </div>
+              <div class="metrica-item">
+                <div class="metrica-valor" id="m-tasa-cobro">—</div>
+                <div class="metrica-label">Tasa de Cobro</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ══════════════════════════════════════════════
+           👤 SECCIÓN: CLIENTES
+      ══════════════════════════════════════════════ -->
+      <section id="section-clientes" class="section">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">Clientes</h1>
+            <p class="section-desc">Gestión de clientes registrados</p>
+          </div>
+          <button class="btn-primary" onclick="openModalCliente()">
+            <i data-feather="user-plus"></i> Nuevo Cliente
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card-toolbar">
+            <div class="search-box">
+              <i data-feather="search"></i>
+              <input type="text" id="search-clientes" placeholder="Buscar por nombre, teléfono..." oninput="filterClientes()" />
+            </div>
+            <select id="sort-clientes" class="select-sm" onchange="sortClientes()">
+              <option value="nombre">Ordenar: Nombre A-Z</option>
+              <option value="nombre-desc">Ordenar: Nombre Z-A</option>
+              <option value="reciente">Más recientes</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table class="table" id="clientes-table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Teléfono</th>
+                  <th>Correo</th>
+                  <th>Edad</th>
+                  <th>Ocupación</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="clientes-body">
+                <tr><td colspan="6" class="empty-row">Cargando clientes...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="paginacion-clientes"></div>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════════════════════════
+           👁️ SECCIÓN: HISTORIAL CLÍNICO
+      ══════════════════════════════════════════════ -->
+      <section id="section-historial" class="section">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">Historial Clínico</h1>
+            <p class="section-desc">Registros visuales y diagnósticos</p>
+          </div>
+          <button class="btn-primary" onclick="openModal('modal-historial')">
+            <i data-feather="plus"></i> Nuevo Registro
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card-toolbar">
+            <div class="search-box">
+              <i data-feather="search"></i>
+              <input type="text" id="search-historial" placeholder="Buscar cliente..." oninput="filterHistorial()" />
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Fecha</th>
+                  <th>AVL S/C</th>
+                  <th>AVL C/C</th>
+                  <th>Diagnóstico</th>
+                  <th>Síntomas</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="historial-body">
+                <tr><td colspan="7" class="empty-row">Cargando historial...</td></tr>
+              </tbody>
+            </table>
+                </div>
+                <div id="paginacion-historial"></div>
+        </div>
+      </section>
+
+<!-- ══════════════════════════════════════════════
+           💰 SECCIÓN: VENTAS
+      ══════════════════════════════════════════════ -->
+      <section id="section-ventas" class="section">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">Ventas</h1>
+            <p class="section-desc">Registro de ventas y productos</p>
+          </div>
+          <div style="display:flex;gap:.6rem;align-items:center;">
+            <button class="btn-outline" onclick="exportVentas()">
+              <i data-feather="download"></i> Exportar
+            </button>
+            <button class="btn-primary" onclick="openModal('modal-venta')">
+              <i data-feather="plus"></i> Nueva Venta
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-toolbar">
+            <div class="search-box">
+              <i data-feather="search"></i>
+              <input type="text" id="search-ventas" placeholder="Buscar cliente o tipo de lente..." oninput="filterVentas()" />
+            </div>
+            <select id="filter-tipo-venta" class="select-sm" onchange="filterVentas()">
+              <option value="">Todos los tipos</option>
+              <option value="normal">Venta Normal</option>
+              <option value="garantia">Garantía</option>
+              <option value="cambio">Cambio</option>
+            </select>
+            <div id="ventas-empleado-wrap" class="hidden">
+              <select id="filter-empleado-ventas" class="select-sm" onchange="filterVentas()">
+                <option value="">👤 Todos los empleados</option>
+              </select>
+            </div>
+            <div class="ventas-periodo-tabs" id="ventas-periodo-tabs">
+              <button class="ventas-periodo-tab active" onclick="cambiarPeriodoVentas('todo', this)" title="Todas las ventas">Todas</button>
+              <button class="ventas-periodo-tab" onclick="cambiarPeriodoVentas('semana', this)" title="Esta semana">Semana</button>
+              <button class="ventas-periodo-tab" onclick="cambiarPeriodoVentas('mes', this)" title="Este mes">Mes</button>
+              <button class="ventas-periodo-tab" onclick="cambiarPeriodoVentas('año', this)" title="Este año">Año</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:.3rem;">
+              <input type="date" id="ventas-fecha-desde" class="select-sm" style="min-width:130px;font-size:.78rem;" oninput="filtrarVentasRango()" title="Desde" />
+              <span style="color:var(--gris-label);font-size:.8rem;">—</span>
+              <input type="date" id="ventas-fecha-hasta" class="select-sm" style="min-width:130px;font-size:.78rem;" oninput="filtrarVentasRango()" title="Hasta" />
+              <button class="btn-sm" onclick="limpiarFiltroVentasFecha()" title="Limpiar fechas">✕</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Tipo Lente</th>
+                  <th>Tipo Venta</th>
+                  <th>Total</th>
+                  <th>Pagado</th>
+                  <th>Restante</th>
+                  <th class="sort-th" data-col="fecha" onclick="toggleOrdenVentas('fecha')" style="cursor:pointer;user-select:none;white-space:nowrap;">
+                    Fecha <span class="sort-icon">↓</span>
+                  </th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="ventas-body">
+                <tr><td colspan="9" class="empty-row">Cargando ventas...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="paginacion-ventas"></div>
+        </div>
+      </section>
+      <!-- ══════════════════════════════════════════════
+           💳 SECCIÓN: PAGOS
+      ══════════════════════════════════════════════ -->
+      <section id="section-pagos" class="section">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">Pagos</h1>
+            <p class="section-desc">Historial de todos los pagos registrados</p>
+          </div>
+          <button class="btn-primary" onclick="openModal('modal-pago')">
+            <i data-feather="plus"></i> Registrar Pago
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card-toolbar">
+            <div class="search-box">
+              <i data-feather="search"></i>
+              <input type="text" id="search-pagos" placeholder="Buscar por cliente..." oninput="filterPagos()" />
+            </div>
+            <select id="filter-metodo-pago" class="select-sm" onchange="filterPagos()">
+              <option value="">Todos los métodos</option>
+              <option value="efectivo">Efectivo</option>
+              <option value="tarjeta">Tarjeta</option>
+              <option value="transferencia">Transferencia</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Monto</th>
+                  <th>Método</th>
+                  <th>Fecha</th>
+                  <th>Venta Ref.</th>
+                  <th>Notas</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="pagos-body">
+                <tr><td colspan="7" class="empty-row">Cargando pagos...</td></tr>
+              </tbody>
+            </table>
+                </div>
+                <div id="paginacion-pagos"></div>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════════════════════════
+           📊 SECCIÓN: ADEUDOS
+      ══════════════════════════════════════════════ -->
+      <section id="section-adeudos" class="section">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">Control de Adeudos</h1>
+            <p class="section-desc">Clientes con saldo pendiente</p>
+          </div>
+        </div>
+
+        <!-- Filtros de estado -->
+        <div class="filter-tabs" id="filter-adeudos">
+          <button class="filter-tab active" onclick="filterAdeudos('todos', this)">Todos</button>
+          <button class="filter-tab" onclick="filterAdeudos('pagado', this)">
+            <span class="dot dot-green"></span> Pagados
+          </button>
+          <button class="filter-tab" onclick="filterAdeudos('parcial', this)">
+            <span class="dot dot-yellow"></span> Parciales
+          </button>
+          <button class="filter-tab" onclick="filterAdeudos('deuda', this)">
+            <span class="dot dot-red"></span> Con Deuda
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card-toolbar">
+            <div class="search-box">
+              <i data-feather="search"></i>
+              <input type="text" id="search-adeudos" placeholder="Buscar cliente..." oninput="filterAdeudosBusqueda()" />
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Estado</th>
+                  <th>Cliente</th>
+                  <th>Teléfono</th>
+                  <th>Total Venta</th>
+                  <th>Pagado</th>
+                  <th>Saldo</th>
+                  <th>Último Pago</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="adeudos-body">
+                <tr><td colspan="8" class="empty-row">Cargando adeudos...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════════════════════════
+           🔄 SECCIÓN: GARANTÍAS Y CAMBIOS
+      ══════════════════════════════════════════════ -->
+      <section id="section-garantias" class="section">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">Garantías y Cambios</h1>
+            <p class="section-desc">Historial de garantías aplicadas y cambios de producto</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-toolbar">
+            <div class="search-box">
+              <i data-feather="search"></i>
+              <input type="text" id="search-garantias" placeholder="Buscar cliente..." oninput="filterGarantias()" />
+            </div>
+            <select id="filter-tipo-garantia" class="select-sm" onchange="filterGarantias()">
+              <option value="">Todos los tipos</option>
+              <option value="garantia">Garantía</option>
+              <option value="cambio">Cambio</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Tipo</th>
+                  <th>Descripción</th>
+                  <th>Diferencia</th>
+                  <th>Fecha</th>
+                  <th>Registrado por</th>
+                </tr>
+              </thead>
+              <tbody id="garantias-body">
+                <tr><td colspan="6" class="empty-row">Cargando registros...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════════════════════════
+           📋 SECCIÓN: AUDITORÍA
+      ══════════════════════════════════════════════ -->
+      <section id="section-auditoria" class="section">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">Auditoría del Sistema</h1>
+            <p class="section-desc">Registro completo de todas las acciones</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-toolbar">
+            <div class="search-box">
+              <i data-feather="search"></i>
+              <input type="text" id="search-auditoria" placeholder="Buscar usuario o acción..." oninput="filterAuditoria()" />
+            </div>
+            <select id="filter-accion" class="select-sm" onchange="filterAuditoria()">
+              <option value="">Todas las acciones</option>
+              <option value="Crear">Crear</option>
+              <option value="Editar">Editar</option>
+              <option value="Eliminar">Eliminar</option>
+              <option value="Pago">Pago</option>
+              <option value="Cambio">Cambio</option>
+              <option value="Garantía">Garantía</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Usuario</th>
+                  <th>Acción</th>
+                  <th>Descripción</th>
+                  <th>Fecha</th>
+                  <th>Hora</th>
+                </tr>
+              </thead>
+              <tbody id="auditoria-body">
+                <tr><td colspan="5" class="empty-row">Cargando auditoría...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+<!-- ══════════════════════════════════════════════
+           📦 SECCIÓN: INVENTARIO
+      ══════════════════════════════════════════════ -->
+      <section id="section-inventario" class="section">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">Inventario</h1>
+            <p class="section-desc">Control de productos, armazones y accesorios</p>
+          </div>
+          <div style="display:flex;gap:.6rem;">
+            <button class="btn-outline" onclick="exportInventario()">
+              <i data-feather="download"></i> Exportar
+            </button>
+            <button class="btn-primary" onclick="openModal('modal-producto')">
+              <i data-feather="plus"></i> Nuevo Producto
+            </button>
+          </div>
+        </div>
+
+        <!-- KPIs de inventario -->
+        <div class="kpi-grid" id="inv-kpis" style="margin-bottom:1.2rem;">
+          <div class="kpi-card kpi-blue">
+            <div class="kpi-icon"><i data-feather="package"></i></div>
+            <div class="kpi-data"><div class="kpi-value" id="inv-kpi-total">—</div><div class="kpi-label">Total Productos</div></div>
+          </div>
+          <div class="kpi-card kpi-teal">
+            <div class="kpi-icon"><i data-feather="layers"></i></div>
+            <div class="kpi-data"><div class="kpi-value" id="inv-kpi-stock">—</div><div class="kpi-label">Unidades en Stock</div></div>
+          </div>
+          <div class="kpi-card kpi-red">
+            <div class="kpi-icon"><i data-feather="alert-triangle"></i></div>
+            <div class="kpi-data"><div class="kpi-value" id="inv-kpi-bajo">—</div><div class="kpi-label">Stock Bajo</div></div>
+          </div>
+          <div class="kpi-card kpi-green">
+            <div class="kpi-icon"><i data-feather="dollar-sign"></i></div>
+            <div class="kpi-data"><div class="kpi-value" id="inv-kpi-valor">—</div><div class="kpi-label">Valor en Inventario</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-toolbar">
+            <div class="search-box">
+              <i data-feather="search"></i>
+              <input type="text" id="search-inventario" placeholder="Buscar producto..." oninput="filterInventario()" />
+            </div>
+            <select id="filter-categoria" class="select-sm" onchange="filterInventario()">
+              <option value="">Todas las categorías</option>
+              <option value="armazon">Armazón</option>
+              <option value="lente">Lente</option>
+              <option value="accesorio">Accesorio</option>
+              <option value="contacto">Lente de contacto</option>
+              <option value="solucion">Solución</option>
+              <option value="otro">Otro</option>
+            </select>
+            <select id="filter-stock" class="select-sm" onchange="filterInventario()">
+              <option value="">Todo el stock</option>
+              <option value="bajo">Stock bajo</option>
+              <option value="agotado">Agotado</option>
+              <option value="disponible">Disponible</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th>Categoría</th>
+                  <th>Marca</th>
+                  <th>Stock</th>
+                  <th>Mín.</th>
+                  <th>Precio Costo</th>
+                  <th>Precio Venta</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="inventario-body">
+                <tr><td colspan="9" class="empty-row">Cargando inventario...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div><!-- /app -->
+
+  <!-- ============================================================
+       🪟 MODALES
+  ============================================================ -->
+
+  <!-- MODAL OVERLAY -->
+  <div class="modal-overlay" id="modal-overlay" onclick="cerrarModalConConfirmacion()"></div>
+
+  <!-- ── MODAL: NUEVO / EDITAR CLIENTE ── -->
+  <div class="modal" id="modal-cliente">
+    <div class="modal-header">
+      <h2 id="modal-cliente-title">Nuevo Cliente</h2>
+      <button class="modal-close" onclick="closeAllModals()"><i data-feather="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="cliente-id" />
+      <div class="form-grid-2">
+        <div class="form-group">
+            <label for="cliente-nombre">Nombre Completo *</label>
+          <input type="text" id="cliente-nombre" placeholder="Ej: María García López" required />
+        </div>
+        <div class="form-group">
+          <label>Teléfono *</label>
+          <input type="tel" id="cliente-telefono" placeholder="Ej: 2281234567" required />
+        </div>
+        <div class="form-group">
+          <label>Correo Electrónico</label>
+          <input type="email" id="cliente-email" placeholder="correo@ejemplo.com" />
+        </div>
+        <div class="form-group">
+          <label>Edad</label>
+          <input type="number" id="cliente-edad" placeholder="Ej: 35" min="1" max="120" />
+        </div>
+        <div class="form-group">
+          <label>Ocupación</label>
+          <input type="text" id="cliente-ocupacion" placeholder="Ej: Docente, Contador..." />
+        </div>
+        <div class="form-group">
+          <label>Dirección</label>
+          <input type="text" id="cliente-direccion" placeholder="Calle, colonia, ciudad..." />
+        </div>
+      </div>
+      <div class="form-group">
+  <label>Escolaridad</label>
+  <input type="text" id="cliente-escolaridad" placeholder="Ej: Licenciatura, Preparatoria..." />
+</div>
+<div class="form-group">
+  <label>Actividades que realiza</label>
+  <input type="text" id="cliente-actividades" placeholder="Ej: Lectura, trabajo en pantalla..." />
+</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeAllModals()">Cancelar</button>
+      <button class="btn-primary" onclick="saveCliente()">
+        <i data-feather="save"></i> Guardar Cliente
+      </button>
+    </div>
+  </div>
+
+  <!-- ── MODAL: VER DETALLE CLIENTE ── -->
+  <div class="modal modal-wide" id="modal-detalle-cliente">
+    <div class="modal-header">
+      <h2 id="detalle-cliente-nombre">Detalle del Cliente</h2>
+      <button class="modal-close" onclick="closeAllModals()"><i data-feather="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <!-- Tabs del detalle -->
+      <div class="detail-tabs">
+        <button class="detail-tab active" onclick="switchDetailTab('info', this)">Información</button>
+        <button class="detail-tab" onclick="switchDetailTab('historial', this)">Historial Clínico</button>
+        <button class="detail-tab" onclick="switchDetailTab('pagos', this)">Pagos</button>
+        <button class="detail-tab" onclick="switchDetailTab('correos', this)">Correos</button>
+      </div>
+
+      <!-- Tab: Info -->
+      <div id="detail-tab-info" class="detail-tab-content active">
+        <div class="info-grid">
+          <div class="info-item"><span class="info-label">Nombre</span><span class="info-value" id="d-nombre">—</span></div>
+          <div class="info-item"><span class="info-label">Teléfono</span><span class="info-value" id="d-telefono">—</span></div>
+          <div class="info-item"><span class="info-label">Correo</span><span class="info-value" id="d-email">—</span></div>
+          <div class="info-item"><span class="info-label">Edad</span><span class="info-value" id="d-edad">—</span></div>
+          <div class="info-item"><span class="info-label">Ocupación</span><span class="info-value" id="d-ocupacion">—</span></div>
+          <div class="info-item"><span class="info-label">Dirección</span><span class="info-value" id="d-direccion">—</span></div>
+          <div class="info-item"><span class="info-label">Escolaridad</span><span class="info-value" id="d-escolaridad">—</span></div>
+          <div class="info-item"><span class="info-label">Actividades</span><span class="info-value" id="d-actividades">—</span></div>
+        </div>
+        <div class="detail-balance-card">
+          <div class="balance-item">
+            <div class="balance-label">Total Compras</div>
+            <div class="balance-value" id="d-total-compras">$0.00</div>
+          </div>
+          <div class="balance-item">
+            <div class="balance-label">Total Pagado</div>
+            <div class="balance-value text-green" id="d-total-pagado">$0.00</div>
+          </div>
+          <div class="balance-item">
+            <div class="balance-label">Saldo Pendiente</div>
+            <div class="balance-value text-red" id="d-saldo-pendiente">$0.00</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Historial Clínico -->
+      <div id="detail-tab-historial" class="detail-tab-content">
+        <div id="detail-historial-list">
+          <div class="empty-row">Sin registros clínicos</div>
+        </div>
+      </div>
+
+      <!-- Tab: Pagos -->
+      <div id="detail-tab-pagos" class="detail-tab-content">
+        <table class="table">
+          <thead>
+            <tr><th>Fecha</th><th>Monto</th><th>Método</th><th>Notas</th></tr>
+          </thead>
+          <tbody id="detail-pagos-body">
+            <tr><td colspan="4" class="empty-row">Sin pagos registrados</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Tab: Correos -->
+      <div id="detail-tab-correos" class="detail-tab-content">
+        <div class="correos-section">
+          <p class="correos-info">Envía notificaciones directamente a este cliente.</p>
+          <div class="correos-btns">
+            <button class="btn-email" id="btn-recordatorio" onclick="sendRecordatorio()">
+            <i data-feather="bell"></i>
+            Enviar Recordatorio de Pago
+            </button>
+            <button class="btn-email btn-email-thanks" onclick="sendAgradecimiento()">
+              <i data-feather="heart"></i>
+              Enviar Agradecimiento
+            </button>
+          </div>
+          <div id="email-status" class="email-status hidden"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- ── MODAL: HISTORIAL CLÍNICO ── -->
+  <div class="modal modal-wide" id="modal-historial">
+    <div class="modal-header">
+      <h2 id="modal-historial-title">Nuevo Registro Clínico</h2>
+      <button class="modal-close" onclick="closeAllModals()"><i data-feather="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="historial-id" />
+      <div class="form-group">
+        <label>Cliente *</label>
+        <select id="historial-cliente" required>
+          <option value="">— Seleccionar cliente —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Fecha</label>
+        <input type="date" id="historial-fecha" />
+      </div>
+
+      <!-- SECCIÓN 1: MOTIVO DE CONSULTA -->
+      <div class="clinica-acordeon">
+        <button type="button" class="acordeon-header" onclick="toggleAcordeon(this)">
+          <span>💬 Motivo de Consulta</span>
+          <i data-feather="chevron-down" class="acordeon-icon"></i>
+        </button>
+        <div class="acordeon-body">
+          <div class="clinica-section">
+            <div class="form-group">
+              <label>Motivo de su visita</label>
+              <textarea id="historial-motivo" rows="2" placeholder="¿Por qué acude hoy?"></textarea>
+            </div>
+            <h4 class="clinica-title" style="margin-top:.8rem">Síntomas Oculares</h4>
+            <div class="sintomas-grid">
+              <label class="checkbox-label"><input type="checkbox" name="sintoma" value="Escozor"> Escozor</label>
+              <label class="checkbox-label"><input type="checkbox" name="sintoma" value="Epífora"> Epífora</label>
+              <label class="checkbox-label"><input type="checkbox" name="sintoma" value="Dolor ocular"> Dolor ocular</label>
+              <label class="checkbox-label"><input type="checkbox" name="sintoma" value="Hiperemia"> Hiperemia</label>
+              <label class="checkbox-label"><input type="checkbox" name="sintoma" value="Secreción"> Secreción</label>
+              <label class="checkbox-label"><input type="checkbox" name="sintoma" value="Fotofobia"> Fotofobia</label>
+            </div>
+            <h4 class="clinica-title" style="margin-top:.8rem">Síntomas Visuales</h4>
+            <div class="sintomas-grid">
+              <label class="checkbox-label"><input type="checkbox" name="sintoma" value="Disminución visión lejana"> Disminución visión lejana</label>
+              <label class="checkbox-label"><input type="checkbox" name="sintoma" value="Disminución visión cercana"> Disminución visión cercana</label>
+              <label class="checkbox-label"><input type="checkbox" name="sintoma" value="Diplopía"> Diplopía</label>
+              <label class="checkbox-label"><input type="checkbox" name="sintoma" value="Halos"> Halos de colores</label>
+              <label class="checkbox-label"><input type="checkbox" name="sintoma" value="Salto de renglón"> Salto de renglón</label>
+              <label class="checkbox-label"><input type="checkbox" name="sintoma" value="Moscas volantes"> Moscas volantes</label>
+              <label class="checkbox-label"><input type="checkbox" name="sintoma" value="Visión en túnel"> Visión en túnel</label>
+              <label class="checkbox-label"><input type="checkbox" name="sintoma" value="Cefalea"> Cefalea</label>
+              <label class="checkbox-label"><input type="checkbox" name="sintoma" value="Fatiga visual"> Fatiga visual</label>
+              <label class="checkbox-label"><input type="checkbox" name="sintoma" value="Baja de peso"> Baja de peso</label>
+              <label class="checkbox-label"><input type="checkbox" name="sintoma" value="Fatiga"> Fatiga general</label>
+            </div>
+            <div class="form-grid-2" style="margin-top:.8rem">
+              <div class="form-group">
+                <label>¿Desde cuándo presenta molestias?</label>
+                <input type="text" id="historial-desde-cuando" placeholder="Ej: 2 semanas, 1 mes..." />
+              </div>
+              <div class="form-group">
+                <label>¿A qué lo atribuye?</label>
+                <input type="text" id="historial-atribuye" placeholder="Ej: cansancio, pantallas..." />
+              </div>
+              <div class="form-group">
+                <label>¿Ha ido en aumento?</label>
+                <select id="historial-aumento">
+                  <option value="">— Seleccionar —</option>
+                  <option value="Sí">Sí</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>¿Ha tomado algún medicamento?</label>
+                <input type="text" id="historial-medicamento" placeholder="Nombre del medicamento o 'Ninguno'" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 2: ANTECEDENTES REFRACTOMÉTRICOS -->
+      <div class="clinica-acordeon">
+        <button type="button" class="acordeon-header" onclick="toggleAcordeon(this)">
+          <span>🔬 Antecedentes Refractométricos</span>
+          <i data-feather="chevron-down" class="acordeon-icon"></i>
+        </button>
+        <div class="acordeon-body">
+          <div class="clinica-section">
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label>Último examen de la vista</label>
+                <input type="text" id="historial-ultimo-examen" placeholder="Ej: hace 2 años, nunca..." />
+              </div>
+              <div class="form-group">
+                <label>¿Utiliza lentes?</label>
+                <select id="historial-usa-lentes">
+                  <option value="">— Seleccionar —</option>
+                  <option value="Sí">Sí</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>¿Desde cuándo usa lentes?</label>
+                <input type="text" id="historial-tiempo-lentes" placeholder="Ej: 5 años..." />
+              </div>
+              <div class="form-group">
+                <label>Cambios de graduación</label>
+                <input type="number" id="historial-cambios-graduacion" placeholder="Número de cambios" min="0" />
+              </div>
+              <div class="form-group">
+                <label>¿Utiliza lentes de contacto?</label>
+                <select id="historial-usa-contacto">
+                  <option value="">— Seleccionar —</option>
+                  <option value="Sí">Sí</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>¿Desde cuándo usa lentes de contacto?</label>
+                <input type="text" id="historial-tiempo-contacto" placeholder="Ej: 1 año..." />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 3: ANTECEDENTES HEREDOFAMILIARES -->
+      <div class="clinica-acordeon">
+        <button type="button" class="acordeon-header" onclick="toggleAcordeon(this)">
+          <span>🧬 Antecedentes Heredofamiliares</span>
+          <i data-feather="chevron-down" class="acordeon-icon"></i>
+        </button>
+        <div class="acordeon-body">
+          <div class="clinica-section">
+            <div class="sintomas-grid">
+              <label class="checkbox-label"><input type="checkbox" name="antecedente" value="Glaucoma"> Glaucoma</label>
+              <label class="checkbox-label"><input type="checkbox" name="antecedente" value="Cataratas"> Cataratas</label>
+              <label class="checkbox-label"><input type="checkbox" name="antecedente" value="Queratocono"> Queratocono</label>
+              <label class="checkbox-label"><input type="checkbox" name="antecedente" value="Diabetes"> Diabetes</label>
+              <label class="checkbox-label"><input type="checkbox" name="antecedente" value="Hipertensión"> Hipertensión</label>
+              <label class="checkbox-label"><input type="checkbox" name="antecedente" value="Terigión"> Terigión</label>
+            </div>
+            <div class="form-group" style="margin-top:.8rem">
+              <label>¿Alguna cirugía ocular?</label>
+              <input type="text" id="historial-cirugia" placeholder="Describe o escribe 'Ninguna'" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 4: REVISIÓN DE ANEXOS -->
+      <div class="clinica-acordeon">
+        <button type="button" class="acordeon-header" onclick="toggleAcordeon(this)">
+          <span>🔎 Revisión de Anexos</span>
+          <i data-feather="chevron-down" class="acordeon-icon"></i>
+        </button>
+        <div class="acordeon-body">
+          <div class="clinica-section">
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label>Párpados</label>
+                <input type="text" id="historial-parpados" placeholder="Normal / Alterado..." />
+              </div>
+              <div class="form-group">
+                <label>Pestañas</label>
+                <input type="text" id="historial-pestanas" placeholder="Normal / Alterado..." />
+              </div>
+              <div class="form-group">
+                <label>Cejas</label>
+                <input type="text" id="historial-cejas" placeholder="Normal / Alterado..." />
+              </div>
+              <div class="form-group">
+                <label>Conjuntiva</label>
+                <input type="text" id="historial-conjuntiva" placeholder="Normal / Alterado..." />
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label>Oftalmoscopía y Retinoscopia</label>
+                <textarea id="historial-oftalmoscopia" rows="2" placeholder="Hallazgos..."></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 5: AGUDEZA VISUAL -->
+      <div class="clinica-acordeon">
+        <button type="button" class="acordeon-header" onclick="toggleAcordeon(this)">
+          <span>👁️ Agudeza Visual</span>
+          <i data-feather="chevron-down" class="acordeon-icon"></i>
+        </button>
+        <div class="acordeon-body">
+          <div class="clinica-section">
+            <div class="av-grid">
+              <!-- AVL S/C -->
+              <div class="av-block">
+                <div class="av-label">AVL S/C</div>
+                <div class="av-row"><span class="av-eye">OD</span><span class="av-prefix">20/</span><input type="text" class="av-input" id="avlsc-od" placeholder="___" /></div>
+                <div class="av-row"><span class="av-eye">OI</span><span class="av-prefix">20/</span><input type="text" class="av-input" id="avlsc-oi" placeholder="___" /></div>
+                <div class="av-row"><span class="av-eye">AO</span><span class="av-prefix">20/</span><input type="text" class="av-input" id="avlsc-ao" placeholder="___" /></div>
+              </div>
+              <!-- AVL C/C -->
+              <div class="av-block">
+                <div class="av-label">AVL C/C</div>
+                <div class="av-row"><span class="av-eye">OD</span><span class="av-prefix">20/</span><input type="text" class="av-input" id="avlcc-od" placeholder="___" /></div>
+                <div class="av-row"><span class="av-eye">OI</span><span class="av-prefix">20/</span><input type="text" class="av-input" id="avlcc-oi" placeholder="___" /></div>
+                <div class="av-row"><span class="av-eye">AO</span><span class="av-prefix">20/</span><input type="text" class="av-input" id="avlcc-ao" placeholder="___" /></div>
+              </div>
+              <!-- VC S/C -->
+              <div class="av-block">
+                <div class="av-label">VC S/C</div>
+                <div class="av-row"><span class="av-eye">OD</span><span class="av-prefix">20/</span><input type="text" class="av-input" id="vcsc-od" placeholder="___" /></div>
+                <div class="av-row"><span class="av-eye">OI</span><span class="av-prefix">20/</span><input type="text" class="av-input" id="vcsc-oi" placeholder="___" /></div>
+                <div class="av-row"><span class="av-eye">AO</span><span class="av-prefix">20/</span><input type="text" class="av-input" id="vcsc-ao" placeholder="___" /></div>
+              </div>
+              <!-- VC C/C -->
+              <div class="av-block">
+                <div class="av-label">VC C/C</div>
+                <div class="av-row"><span class="av-eye">OD</span><span class="av-prefix">20/</span><input type="text" class="av-input" id="vccc-od" placeholder="___" /></div>
+                <div class="av-row"><span class="av-eye">OI</span><span class="av-prefix">20/</span><input type="text" class="av-input" id="vccc-oi" placeholder="___" /></div>
+                <div class="av-row"><span class="av-eye">AO</span><span class="av-prefix">20/</span><input type="text" class="av-input" id="vccc-ao" placeholder="___" /></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 6: TOMA DE AGUDEZA VISUAL COMPLETA -->
+      <div class="clinica-acordeon">
+        <button type="button" class="acordeon-header" onclick="toggleAcordeon(this)">
+          <span>📐 Toma de Agudeza Visual — Detalles</span>
+          <i data-feather="chevron-down" class="acordeon-icon"></i>
+        </button>
+        <div class="acordeon-body">
+          <div class="clinica-section">
+            <div class="form-grid-2">
+              <div class="form-group"><label>PH 20/ OD</label><input type="text" id="ph-od" placeholder="Ej: 20" /></div>
+              <div class="form-group"><label>PH 20/ OI</label><input type="text" id="ph-oi" placeholder="Ej: 20" /></div>
+              <div class="form-group"><label>RELOJ OD</label><input type="text" id="reloj-od" /></div>
+              <div class="form-group"><label>RELOJ OI</label><input type="text" id="reloj-oi" /></div>
+              <div class="form-group"><label>BICRO OD</label><input type="text" id="bicro-od" /></div>
+              <div class="form-group"><label>BICRO OI</label><input type="text" id="bicro-oi" /></div>
+              <div class="form-group"><label>MPP OD</label><input type="text" id="mpp-od" /></div>
+              <div class="form-group"><label>MPP OI</label><input type="text" id="mpp-oi" /></div>
+              <div class="form-group"><label>Altura</label><input type="text" id="historial-altura" placeholder="mm" /></div>
+              <div class="form-group"><label>Distancia Interpupilar</label><input type="text" id="historial-dip" placeholder="mm" /></div>
+              <div class="form-group"><label>Dist. Naso Pupilar OD</label><input type="text" id="historial-dnp-od" placeholder="mm" /></div>
+              <div class="form-group"><label>Dist. Naso Pupilar OI</label><input type="text" id="historial-dnp-oi" placeholder="mm" /></div>
+              <div class="form-group"><label>ADD</label><input type="text" id="historial-add" /></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 7: GRADUACIÓN Y RX FINAL -->
+      <div class="clinica-acordeon">
+        <button type="button" class="acordeon-header" onclick="toggleAcordeon(this)">
+          <span>📋 Graduación de Lentes Anteriores y RX Final</span>
+          <i data-feather="chevron-down" class="acordeon-icon"></i>
+        </button>
+        <div class="acordeon-body">
+          <div class="clinica-section">
+            <div class="form-grid-2">
+              <div class="form-group"><label>Grad. anterior OD</label><input type="text" id="historial-grad-ant-od" /></div>
+              <div class="form-group"><label>Grad. anterior OI</label><input type="text" id="historial-grad-ant-oi" /></div>
+              <div class="form-group"><label>Eje astigmático OD</label><input type="text" id="historial-eje-od" placeholder="°" /></div>
+              <div class="form-group"><label>Eje astigmático OI</label><input type="text" id="historial-eje-oi" placeholder="°" /></div>
+              <div class="form-group"><label>Prueba ambulatoria</label><input type="text" id="historial-prueba-amb" placeholder="Ej: Sí, No, Pendiente..." /></div>
+              <div class="form-group"><label>RX Final OD</label><input type="text" id="historial-rx-od" placeholder="Esfera / Cilindro / Eje" /></div>
+              <div class="form-group"><label>RX Final OI</label><input type="text" id="historial-rx-oi" placeholder="Esfera / Cilindro / Eje" /></div>
+              <div class="form-group"><label>ADD (RX Final)</label><input type="text" id="historial-rx-add" /></div>
+              <div class="form-group"><label>Material de lente</label><input type="text" id="historial-material" placeholder="Ej: CR-39, policarbonato..." /></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 8: DIAGNÓSTICO Y OBSERVACIONES -->
+      <div class="clinica-acordeon">
+        <button type="button" class="acordeon-header" onclick="toggleAcordeon(this)">
+          <span>📝 Diagnóstico y Observaciones</span>
+          <i data-feather="chevron-down" class="acordeon-icon"></i>
+        </button>
+        <div class="acordeon-body">
+          <div class="form-grid-2" style="padding:.5rem 0;">
+            <div class="form-group">
+              <label>Diagnóstico</label>
+              <textarea id="historial-diagnostico" rows="3" placeholder="Diagnóstico del optometrista..."></textarea>
+            </div>
+            <div class="form-group">
+              <label>Observaciones</label>
+              <textarea id="historial-observaciones" rows="3" placeholder="Observaciones adicionales..."></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeAllModals()">Cancelar</button>
+      <button class="btn-primary" onclick="saveHistorial()">
+        <i data-feather="save"></i> Guardar Registro
+      </button>
+    </div>
+  </div>
+
+  <!-- ── MODAL: NUEVA VENTA ── -->
+  <div class="modal" id="modal-venta">
+    <div class="modal-header">
+      <h2 id="modal-venta-title">Nueva Venta</h2>
+      <button class="modal-close" onclick="closeAllModals()"><i data-feather="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="venta-id" />
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label>Cliente *</label>
+          <select id="venta-cliente" required>
+            <option value="">— Seleccionar cliente —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tipo de Venta *</label>
+          <select id="venta-tipo" onchange="handleTipoVenta()">
+            <option value="normal">Venta Normal</option>
+            <option value="garantia">Garantía</option>
+            <option value="cambio">Cambio</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Producto del Inventario</label>
+          <select id="venta-producto" onchange="onProductoChange()">
+            <option value="">— Seleccionar producto (opcional) —</option>
+          </select>
+          <div id="venta-stock-display" style="margin-top:.4rem;"></div>
+        </div>
+        <div class="form-group">
+          <label>Tipo de Lente *</label>
+          <input type="text" id="venta-lente" placeholder="Ej: Monofocal, Bifocal, Progresivo..." required />
+        </div>
+        <div class="form-group">
+          <label>Cantidad</label>
+          <input type="number" id="venta-cantidad" value="1" min="1" step="1" oninput="calcularTotal()" />
+        </div>
+        <div class="form-group">
+          <label>Fecha</label>
+          <input type="date" id="venta-fecha" />
+        </div>
+        <div class="form-group">
+          <label>Precio Total ($)</label>
+          <input type="number" id="venta-precio" placeholder="0.00" min="0" step="0.01" oninput="calcularTotal()" />
+        </div>
+        <div class="form-group">
+          <label>Descuento ($)</label>
+          <input type="number" id="venta-descuento" placeholder="0.00" min="0" step="0.01" value="0" oninput="calcularTotal()" />
+        </div>
+        <div class="form-group">
+          <label>Total Final</label>
+          <input type="text" id="venta-total" class="input-readonly" readonly placeholder="$0.00" />
+        </div>
+        <div class="form-group">
+          <label>Anticipo ($)</label>
+          <input type="number" id="venta-anticipo" placeholder="0.00" min="0" step="0.01" oninput="calcularRestante()" />
+        </div>
+        <div class="form-group">
+          <label>Restante</label>
+          <input type="text" id="venta-restante" class="input-readonly" readonly placeholder="$0.00" />
+        </div>
+        <div class="form-group">
+          <label>Método de Pago</label>
+          <select id="venta-metodo">
+            <option value="efectivo">Efectivo</option>
+            <option value="tarjeta">Tarjeta</option>
+            <option value="transferencia">Transferencia</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Diferencia de cambio (solo para tipo=cambio) -->
+      <div id="cambio-extra" class="hidden">
+        <div class="alert-info">
+          <i data-feather="info"></i>
+          En cambios, si el nuevo producto tiene diferente precio, registra aquí la diferencia.
+        </div>
+        <div class="form-group">
+          <label>Diferencia de Precio ($)</label>
+          <input type="number" id="venta-diferencia" placeholder="0.00" step="0.01" oninput="calcularTotal()" />
+        </div>
+        <div class="form-group">
+          <label>Descripción del Cambio</label>
+          <textarea id="venta-cambio-desc" rows="2" placeholder="Motivo o descripción del cambio..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeAllModals()">Cancelar</button>
+      <button class="btn-primary" onclick="saveVenta()">
+        <i data-feather="save"></i> Guardar Venta
+      </button>
+    </div>
+  </div>
+
+  <!-- ── MODAL: REGISTRAR PAGO ── -->
+  <div class="modal" id="modal-pago">
+    <div class="modal-header">
+      <h2>Registrar Pago</h2>
+      <button class="modal-close" onclick="closeAllModals()"><i data-feather="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="pago-venta-id" />
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label>Cliente *</label>
+          <select id="pago-cliente" onchange="loadVentasDeCliente()" required>
+            <option value="">— Seleccionar cliente —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Venta a Pagar *</label>
+          <select id="pago-venta" onchange="loadSaldoVenta()" required>
+            <option value="">— Seleccionar venta —</option>
+          </select>
+        </div>
+      </div>
+      <div id="pago-resumen" class="pago-resumen hidden">
+        <div class="resumen-row">
+          <span>Total:</span><strong id="r-total">—</strong>
+        </div>
+        <div class="resumen-row">
+          <span>Ya pagado:</span><strong class="text-green" id="r-pagado">—</strong>
+        </div>
+        <div class="resumen-row">
+          <span>Saldo pendiente:</span><strong class="text-red" id="r-saldo">—</strong>
+        </div>
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label>Monto a Pagar ($) *</label>
+          <input type="number" id="pago-monto" placeholder="0.00" min="0.01" step="0.01" required />
+        </div>
+        <div class="form-group">
+          <label>Método de Pago</label>
+          <select id="pago-metodo">
+            <option value="efectivo">Efectivo</option>
+            <option value="tarjeta">Tarjeta</option>
+            <option value="transferencia">Transferencia</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Fecha</label>
+          <input type="date" id="pago-fecha" />
+        </div>
+        <div class="form-group">
+          <label>Notas</label>
+          <input type="text" id="pago-notas" placeholder="Observaciones del pago..." />
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeAllModals()">Cancelar</button>
+      <button class="btn-primary" onclick="savePago()">
+        <i data-feather="dollar-sign"></i> Registrar Pago
+      </button>
+    </div>
+  </div>
+<!-- ── MODAL: NUEVO / EDITAR PRODUCTO ── -->
+  <div class="modal" id="modal-producto">
+    <div class="modal-header">
+      <h2 id="modal-producto-title">Nuevo Producto</h2>
+      <button class="modal-close" onclick="closeAllModals()"><i data-feather="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="producto-id" />
+      <div class="form-grid-2">
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Nombre del Producto *</label>
+          <input type="text" id="producto-nombre" placeholder="Ej: Armazón Titanio Redondo" required />
+        </div>
+
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Imagen del Producto <span style="color:var(--gris-label);font-size:.74rem;font-weight:400">— opcional, se comprimirá como miniatura</span></label>
+          <div class="img-upload-wrap">
+            <div class="img-upload-zone" id="img-upload-zone" onclick="document.getElementById('producto-imagen-input').click()">
+              <img id="producto-imagen-preview" src="" alt="Vista previa" />
+              <div class="img-upload-ph" id="img-upload-ph">
+                <i data-feather="image"></i>
+                <span>Clic o arrastra una imagen aquí</span>
+                <small>JPG, PNG, WEBP · máx 5 MB</small>
+              </div>
+            </div>
+            <div class="img-upload-actions" id="img-upload-actions">
+              <button type="button" class="btn-sm" style="color:var(--rojo);border-color:var(--rojo)" onclick="quitarImagenProducto()">✕ Quitar imagen</button>
+            </div>
+            <input type="file" id="producto-imagen-input" accept="image/*" style="display:none" onchange="handleImagenProducto(this)" />
+            <input type="hidden" id="producto-imagen-url" />
+            <div id="img-upload-status"></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Categoría *</label>
+          <select id="producto-categoria">
+            <option value="armazon">Armazón</option>
+            <option value="lente">Lente</option>
+            <option value="accesorio">Accesorio</option>
+            <option value="contacto">Lente de contacto</option>
+            <option value="solucion">Solución</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Marca</label>
+          <input type="text" id="producto-marca" placeholder="Ej: Ray-Ban, Oakley..." />
+        </div>
+        <div class="form-group">
+          <label>Código / SKU</label>
+          <input type="text" id="producto-sku" placeholder="Ej: ARM-001" />
+        </div>
+        <div class="form-group">
+          <label>Color / Modelo</label>
+          <input type="text" id="producto-color" placeholder="Ej: Negro, Dorado..." />
+        </div>
+        <div class="form-group">
+          <label>Stock Actual *</label>
+          <input type="number" id="producto-stock" placeholder="0" min="0" required />
+        </div>
+        <div class="form-group">
+          <label>Stock Mínimo (alerta)</label>
+          <input type="number" id="producto-stock-min" placeholder="3" min="0" value="3" />
+        </div>
+        <div class="form-group">
+          <label>Precio de Costo ($)</label>
+          <input type="number" id="producto-precio-costo" placeholder="0.00" min="0" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label>Precio de Venta ($)</label>
+          <input type="number" id="producto-precio-venta" placeholder="0.00" min="0" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label>Proveedor</label>
+          <input type="text" id="producto-proveedor" placeholder="Nombre del proveedor..." />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notas</label>
+        <textarea id="producto-notas" rows="2" placeholder="Descripción, características adicionales..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeAllModals()">Cancelar</button>
+      <button class="btn-primary" onclick="saveProducto()">
+        <i data-feather="save"></i> Guardar Producto
+      </button>
+    </div>
+  </div>
+
+  <!-- ── MODAL: AJUSTE DE STOCK ── -->
+  <div class="modal modal-sm" id="modal-ajuste-stock">
+    <div class="modal-header">
+      <h2>Ajustar Stock</h2>
+      <button class="modal-close" onclick="closeAllModals()"><i data-feather="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="ajuste-producto-id" />
+      <div id="ajuste-producto-info" class="pago-resumen" style="margin-bottom:1rem;"></div>
+      <div class="form-group">
+        <label>Tipo de Ajuste</label>
+        <select id="ajuste-tipo">
+          <option value="entrada">➕ Entrada (recibí mercancía)</option>
+          <option value="salida">➖ Salida (venta / baja)</option>
+          <option value="ajuste">🔄 Ajuste de conteo</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Cantidad</label>
+        <input type="number" id="ajuste-cantidad" placeholder="0" min="0" />
+      </div>
+      <div class="form-group">
+        <label>Motivo</label>
+        <input type="text" id="ajuste-motivo" placeholder="Ej: Compra a proveedor, venta directa..." />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeAllModals()">Cancelar</button>
+      <button class="btn-primary" onclick="guardarAjusteStock()">
+        <i data-feather="check"></i> Confirmar Ajuste
+      </button>
+    </div>
+  </div>
+  <!-- ── MODAL: EXPORTAR VENTAS ── -->
+  <div class="modal" id="modal-export-ventas">
+    <div class="modal-header">
+      <h2>Exportar Ventas</h2>
+      <button class="modal-close" onclick="closeAllModals()"><i data-feather="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label>Fecha Desde</label>
+          <input type="date" id="export-fecha-desde" />
+        </div>
+        <div class="form-group">
+          <label>Fecha Hasta</label>
+          <input type="date" id="export-fecha-hasta" />
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Empleado / Registrado por</label>
+          <select id="export-empleado">
+            <option value="">— Todos los empleados —</option>
+          </select>
+        </div>
+      </div>
+      <p style="font-size:.82rem;color:var(--gris-label);margin-top:.5rem;line-height:1.5">
+        Deja las fechas vacías para exportar todas las ventas sin filtro de fecha.<br>
+        El archivo CSV incluye BOM para compatibilidad con Excel.
+      </p>
+      <div id="export-preview" style="margin-top:.8rem;font-size:.83rem;color:var(--azul-medio);font-weight:600;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeAllModals()">Cancelar</button>
+      <button class="btn-primary" onclick="doExportVentas()">
+        <i data-feather="download"></i> Descargar CSV
+      </button>
+    </div>
+  </div>
+  <div class="modal modal-sm" id="modal-confirmar">
+    <div class="modal-header">
+      <h2>Confirmar Eliminación</h2>
+      <button class="modal-close" onclick="closeAllModals()"><i data-feather="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="confirm-icon"><i data-feather="alert-triangle"></i></div>
+      <p class="confirm-text" id="confirm-text">¿Estás seguro de que deseas eliminar este registro? Esta acción no se puede deshacer.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeAllModals()">Cancelar</button>
+      <button class="btn-danger" id="confirm-btn" onclick="">
+        <i data-feather="trash-2"></i> Eliminar
+      </button>
+    </div>
+  </div>
+
+  <!-- ── MODAL: VER HISTORIAL CLÍNICO COMPLETO ── -->
+  <div class="modal modal-wide" id="modal-ver-historial">
+    <div class="modal-header">
+      <h2>Detalle Clínico</h2>
+      <button class="modal-close" onclick="closeAllModals()"><i data-feather="x"></i></button>
+    </div>
+    <div class="modal-body" id="ver-historial-content">
+      <!-- Llenado dinámicamente -->
+    </div>
+  </div>
+
+  <!-- ============================================================
+       🔔 TOAST NOTIFICATIONS
+  ============================================================ -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- ============================================================
+       ⏳ LOADING OVERLAY
+  ============================================================ -->
+  <div id="loading-overlay" class="loading-overlay hidden">
+    <div class="loading-box">
+      <div class="loading-spinner"></div>
+      <p id="loading-text">Procesando...</p>
+    </div>
+  </div>
+  <!-- iframe oculto para impresión en PWA — no eliminar -->
+  <iframe id="print-frame" style="display:none;position:absolute;width:0;height:0;border:0;" title="Impresión"></iframe>
+
+  <!-- Script principal -->
+  <script src="script.js"></script>
+</body>
+</html>

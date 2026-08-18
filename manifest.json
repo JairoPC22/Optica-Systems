@@ -1,0 +1,20 @@
+{
+  "name": "Óptica Aurora — Sistema",
+  "short_name": "Óptica Aurora",
+  "description": "Sistema de gestión interno de Óptica Aurora",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1F3A5F",
+  "theme_color": "#1F3A5F",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "Logo-optica.ico",
+      "sizes": "any",
+      "type": "image/x-icon",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "lang": "es"
+}
