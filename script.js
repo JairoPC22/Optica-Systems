@@ -5,7 +5,8 @@
 ══════════════════════════════════════════════════════════════ */
 
 const CONFIG = {
-   APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyFk7nNnhZAVrwsXBOrdK8RVit6r8-IYtmYE1j6Z3i8nB71red0dtC-xlo4WKC0txON2A/exec',
+  // Única fuente de verdad para la URL del backend — no la dupliques en otros archivos.
+   APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyZKDk86o5yK-N_msVk5eNcc-sskrxgE_DAfDwXuk9ijibQerjkTiDyjv6BU9WwUk89ig/exec',
 
   EMAILJS: {
     PUBLIC_KEY:       '_3DU7Uv315ZzgAFJl',
@@ -32,6 +33,8 @@ const CONFIG = {
 
 const STATE = {
   usuario:    null,
+  sesionToken:  null, // Token de sesión emitido por el servidor — nunca es la contraseña.
+  sesionExpira: null,
   clientes:   [],
   ventas:     [],
   pagos:      [],
@@ -172,10 +175,11 @@ async function sincronizarCola() {
       const res   = await fetch(CONFIG.APPS_SCRIPT_URL, {
         method: 'POST',
         signal: ctrl.signal,
-        body: JSON.stringify({ hoja: op.hoja, action: op.action, payload: op.data, token: 'aurora_x9k2mZ8pQr' }),
+        body: JSON.stringify({ hoja: op.hoja, action: op.action, payload: op.data, token: STATE.sesionToken }),
       });
       clearTimeout(timer);
       const json = await res.json();
+      if (json.sesionInvalida) { handleLogout(); fail++; break; }
       if (json.ok !== false) { await idbEliminarDeCola(op.colId); ok++; }
       else fail++;
     } catch { fail++; }
@@ -222,14 +226,23 @@ document.addEventListener('DOMContentLoaded', () => {
     emailjs.init(CONFIG.EMAILJS.PUBLIC_KEY);
   }
 
-  // Verificar sesión activa
-  const sesion = sessionStorage.getItem('aurora_usuario');
+  // Verificar sesión activa (solo dura mientras la pestaña está abierta —
+  // sessionStorage, nunca localStorage, para no dejar el token accesible
+  // de forma permanente en el navegador).
+  const sesion = sessionStorage.getItem('aurora_sesion');
   if (sesion) {
     try {
-      STATE.usuario = JSON.parse(sesion);
-      iniciarApp();
+      const datos = JSON.parse(sesion);
+      if (datos.expira && new Date(datos.expira) > new Date()) {
+        STATE.usuario      = datos.usuario;
+        STATE.sesionToken  = datos.token;
+        STATE.sesionExpira = datos.expira;
+        iniciarApp();
+      } else {
+        sessionStorage.removeItem('aurora_sesion');
+      }
     } catch {
-      sessionStorage.removeItem('aurora_usuario');
+      sessionStorage.removeItem('aurora_sesion');
     }
   }
 
@@ -301,6 +314,49 @@ function actualizarFechaTopbar() {
    🔐  AUTENTICACIÓN
 ══════════════════════════════════════════════════════════════ */
 
+/**
+ * Llama a una acción del backend que no pertenece al CRUD genérico de hojas
+ * (login, logout, cambio de contraseña, administración de usuarios...).
+ * Centraliza el envío del token de sesión y el manejo de sesión inválida.
+ */
+async function apiAccion(action, payload = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25000);
+  try {
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
+      method: 'POST',
+      signal: controller.signal,
+      body: JSON.stringify({ action, payload, token: STATE.sesionToken }),
+    });
+    const json = await res.json();
+    clearTimeout(timer);
+    if (json.sesionInvalida) {
+      showToast(json.error || 'Tu sesión ya no es válida. Inicia sesión nuevamente.', 'warning', 6000);
+      handleLogout();
+    }
+    return json;
+  } catch (err) {
+    clearTimeout(timer);
+    if (err.name === 'AbortError') throw new Error('Tiempo de espera agotado. Verifica tu conexión.');
+    throw err;
+  }
+}
+
+/** Sincroniza sessionStorage con el STATE de sesión actual — debe llamarse
+ *  cada vez que cambie STATE.usuario/sesionToken/sesionExpira, para que un
+ *  reload no restaure datos obsoletos (p. ej. debeCambiarPassword). */
+function guardarSesionStorage() {
+  sessionStorage.setItem('aurora_sesion', JSON.stringify({
+    usuario: STATE.usuario, token: STATE.sesionToken, expira: STATE.sesionExpira,
+  }));
+}
+
+/** Limpia de inmediato el campo de contraseña — nunca debe permanecer en el DOM ni en memoria. */
+function limpiarCampoPassword() {
+  const campo = document.getElementById('login-pass');
+  if (campo) campo.value = '';
+}
+
 async function handleLogin(e) {
   e.preventDefault();
 
@@ -318,25 +374,11 @@ async function handleLogin(e) {
   spinner.classList.remove('hidden');
   error.classList.add('hidden');
 
-  // ── Sin conexión → intentar sesión guardada localmente ──
+  // Iniciar sesión requiere validar la contraseña en el servidor: sin
+  // conexión no hay forma segura de comprobarla, así que no se intenta.
   if (!navigator.onLine) {
-    const raw = localStorage.getItem('aurora_sesion_local');
-    if (raw) {
-      try {
-        const u = JSON.parse(raw);
-        if (u._usuario === usuario) {
-          STATE.usuario = u;
-          sessionStorage.setItem('aurora_usuario', JSON.stringify(u));
-          btn.disabled = false;
-          btnText.textContent = 'Ingresar al Sistema';
-          spinner.classList.add('hidden');
-          showToast('Modo offline — usando sesión guardada', 'warning', 5000);
-          iniciarApp();
-          return;
-        }
-      } catch {}
-    }
-    error.querySelector('span').textContent = 'Sin conexión y no hay sesión guardada. Conéctate a internet para el primer inicio.';
+    limpiarCampoPassword();
+    error.querySelector('span').textContent = 'Sin conexión. Conéctate a internet para iniciar sesión.';
     error.classList.remove('hidden');
     feather.replace();
     btn.disabled = false;
@@ -351,19 +393,26 @@ async function handleLogin(e) {
       body: JSON.stringify({ action: 'login', payload: { usuario, contrasena } }),
     });
     const json = await res.json();
+    limpiarCampoPassword(); // la contraseña ya cumplió su propósito, no debe seguir en el DOM
 
     if (!json.ok) {
+      error.querySelector('span').textContent = json.error || 'Usuario o contraseña incorrectos.';
       error.classList.remove('hidden');
       feather.replace();
     } else {
-      STATE.usuario = json.usuario;
-      sessionStorage.setItem('aurora_usuario', JSON.stringify(STATE.usuario));
-      // Guardar sesión para uso offline (sin contraseña)
-      localStorage.setItem('aurora_sesion_local', JSON.stringify({ ...STATE.usuario, _usuario: usuario }));
-      iniciarApp();
+      STATE.usuario      = json.usuario;
+      STATE.sesionToken  = json.token;
+      STATE.sesionExpira = json.expira;
+      guardarSesionStorage();
+      if (json.usuario.debeCambiarPassword) {
+        abrirCambioPasswordObligatorio();
+      } else {
+        iniciarApp();
+      }
     }
   } catch (err) {
     console.error('Error de login:', err);
+    limpiarCampoPassword();
     error.querySelector('span').textContent = 'Error de conexión. Verifica tu configuración.';
     error.classList.remove('hidden');
     feather.replace();
@@ -375,9 +424,20 @@ async function handleLogin(e) {
 }
 
 function handleLogout() {
-  sessionStorage.removeItem('aurora_usuario');
-  localStorage.removeItem('aurora_sesion_local');
+  // Mejor esfuerzo: revocar la sesión en el servidor (fetch directo, sin pasar
+  // por apiAccion, para no disparar su manejo de "sesión inválida" mientras
+  // ya estamos cerrando sesión intencionalmente). Si falla, igual se cierra
+  // la sesión localmente — nunca debe bloquear el logout.
+  if (STATE.sesionToken && navigator.onLine) {
+    fetch(CONFIG.APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'logout', token: STATE.sesionToken }),
+    }).catch(() => {});
+  }
+  sessionStorage.removeItem('aurora_sesion');
   STATE.usuario = null;
+  STATE.sesionToken = null;
+  STATE.sesionExpira = null;
   STATE.clientes = [];
   STATE.ventas   = [];
   STATE.pagos    = [];
@@ -391,6 +451,13 @@ function handleLogout() {
   document.querySelectorAll('#filter-adeudos .filter-tab').forEach((t, i) => {
     t.classList.toggle('active', i === 0);
   });
+  // Vaciar el contenido de secciones solo-admin: si otro usuario con menos
+  // privilegios inicia sesión después en la misma pestaña, no debe quedar
+  // ni un instante de contenido residual de Usuarios/Auditoría en el DOM.
+  const usuariosBody = document.getElementById('usuarios-body');
+  if (usuariosBody) usuariosBody.innerHTML = '';
+  const auditoriaBody = document.getElementById('auditoria-body');
+  if (auditoriaBody) auditoriaBody.innerHTML = '';
   try { if (_chartVentas)    { _chartVentas.destroy();    _chartVentas = null; } } catch(e) {}
   try { if (_chartEstados)   { _chartEstados.destroy();   _chartEstados = null; } } catch(e) {}
   try { if (_chartNumVentas) { _chartNumVentas.destroy(); _chartNumVentas = null; } } catch(e) {}
@@ -400,6 +467,90 @@ function handleLogout() {
   document.getElementById('login-screen').classList.remove('hidden');
   document.getElementById('login-form').reset();
   document.getElementById('login-error').classList.add('hidden');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   🔑  CAMBIO DE CONTRASEÑA
+══════════════════════════════════════════════════════════════ */
+
+let _cambioPasswordObligatorio = false;
+
+/** Se muestra cuando el servidor indica que la contraseña actual es temporal. */
+function abrirCambioPasswordObligatorio() {
+  _cambioPasswordObligatorio = true;
+  document.getElementById('cambiar-pass-actual').value = '';
+  document.getElementById('cambiar-pass-nueva').value = '';
+  document.getElementById('cambiar-pass-confirmar').value = '';
+  document.getElementById('cambiar-pass-error').classList.add('hidden');
+  document.getElementById('cambiar-pass-obligatorio-aviso').classList.remove('hidden');
+  document.getElementById('cambiar-pass-cerrar').classList.add('hidden');
+  openModal('modal-cambiar-password');
+}
+
+/** Cambio de contraseña voluntario, disponible desde el menú de usuario. */
+function abrirCambioPassword() {
+  _cambioPasswordObligatorio = false;
+  document.getElementById('cambiar-pass-actual').value = '';
+  document.getElementById('cambiar-pass-nueva').value = '';
+  document.getElementById('cambiar-pass-confirmar').value = '';
+  document.getElementById('cambiar-pass-error').classList.add('hidden');
+  document.getElementById('cambiar-pass-obligatorio-aviso').classList.add('hidden');
+  document.getElementById('cambiar-pass-cerrar').classList.remove('hidden');
+  openModal('modal-cambiar-password');
+}
+
+async function handleCambiarPassword(e) {
+  e.preventDefault();
+  const actual    = document.getElementById('cambiar-pass-actual').value;
+  const nueva     = document.getElementById('cambiar-pass-nueva').value;
+  const confirmar = document.getElementById('cambiar-pass-confirmar').value;
+  const error     = document.getElementById('cambiar-pass-error');
+  error.classList.add('hidden');
+
+  const limpiarCampos = () => {
+    document.getElementById('cambiar-pass-actual').value = '';
+    document.getElementById('cambiar-pass-nueva').value = '';
+    document.getElementById('cambiar-pass-confirmar').value = '';
+  };
+
+  if (nueva.length < 8) {
+    error.textContent = 'La nueva contraseña debe tener al menos 8 caracteres.';
+    error.classList.remove('hidden');
+    return;
+  }
+  if (nueva !== confirmar) {
+    error.textContent = 'Las contraseñas no coinciden.';
+    error.classList.remove('hidden');
+    return;
+  }
+
+  const btn = document.getElementById('cambiar-pass-btn');
+  btn.disabled = true;
+  try {
+    const json = await apiAccion('change_password', { actual, nueva });
+    limpiarCampos();
+    if (!json.ok) {
+      error.textContent = json.error || 'No se pudo cambiar la contraseña.';
+      error.classList.remove('hidden');
+      return;
+    }
+    showToast('Contraseña actualizada correctamente', 'success');
+    closeAllModals();
+    if (STATE.usuario) {
+      STATE.usuario.debeCambiarPassword = false;
+      guardarSesionStorage();
+    }
+    if (_cambioPasswordObligatorio) {
+      _cambioPasswordObligatorio = false;
+      iniciarApp();
+    }
+  } catch (err) {
+    limpiarCampos();
+    error.textContent = 'Error de conexión. Intenta de nuevo.';
+    error.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function togglePassword() {
@@ -424,6 +575,12 @@ async function iniciarApp() {
   document.getElementById('app').classList.remove('hidden');
 
   renderUsuarioUI();
+  // Siempre arrancar en el dashboard: si un usuario cierra sesión y otro
+  // inicia sesión en la misma pestaña, evita que quede visible el contenido
+  // (ya vacío por handleLogout, pero por defensa en profundidad) de una
+  // sección restringida como Usuarios/Auditoría que el usuario anterior
+  // tenía abierta.
+  navigateTo('dashboard');
 
   const colaInicial = await idbCola();
   STATE._colaPendiente = colaInicial.length;
@@ -490,6 +647,9 @@ function renderUsuarioUI() {
   const navAuditoria = document.getElementById('nav-item-auditoria');
   if (navAuditoria) navAuditoria.style.display = esAdmin ? '' : 'none';
 
+  const navUsuarios = document.getElementById('nav-item-usuarios');
+  if (navUsuarios) navUsuarios.style.display = esAdmin ? '' : 'none';
+
   const ventasEmpleadoWrap = document.getElementById('ventas-empleado-wrap');
   if (ventasEmpleadoWrap) ventasEmpleadoWrap.classList.toggle('hidden', !esAdmin);
 
@@ -514,7 +674,7 @@ async function apiGet(hoja, params = {}) {
   const url = new URL(CONFIG.APPS_SCRIPT_URL);
   url.searchParams.set('hoja', hoja);
   url.searchParams.set('action', 'get');
-  url.searchParams.set('token', 'aurora_x9k2mZ8pQr');
+  url.searchParams.set('token', STATE.sesionToken || '');
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
 
   const controller = new AbortController();
@@ -523,6 +683,11 @@ async function apiGet(hoja, params = {}) {
     const res  = await fetch(url.toString(), { signal: controller.signal });
     const json = await res.json();
     clearTimeout(timer);
+    if (json.sesionInvalida) {
+      showToast(json.error || 'Tu sesión ya no es válida. Inicia sesión nuevamente.', 'warning', 6000);
+      handleLogout();
+      return { data: [] };
+    }
     const data = json.data || [];
     // Guardar en IndexedDB para uso offline
     idbGuardar(`hoja_${hoja}`, data).catch(() => {});
@@ -560,10 +725,15 @@ async function apiPost(hoja, action, data) {
     const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
       method: 'POST',
       signal: controller.signal,
-      body: JSON.stringify({ hoja, action, payload: data, token: 'aurora_x9k2mZ8pQr' }),
+      body: JSON.stringify({ hoja, action, payload: data, token: STATE.sesionToken }),
     });
     const json = await res.json();
     clearTimeout(timer);
+    if (json.sesionInvalida) {
+      showToast(json.error || 'Tu sesión ya no es válida. Inicia sesión nuevamente.', 'warning', 6000);
+      handleLogout();
+      throw new Error('Sesión inválida.');
+    }
     if (json.ok === false) throw new Error(json.error || 'Error del servidor');
     return { ok: true, id: json.id || data.id };
   } catch (err) {
@@ -611,6 +781,172 @@ async function registrarAuditoria(tipo, descripcion) {
   if (document.getElementById('section-auditoria')?.classList.contains('active')) {
     renderAuditoria();
   }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   👤  ADMINISTRACIÓN DE USUARIOS (solo administradores)
+══════════════════════════════════════════════════════════════ */
+
+async function cargarYRenderUsuarios() {
+  const tbody = document.getElementById('usuarios-body');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="empty-row">Cargando usuarios...</td></tr>';
+  try {
+    const json = await apiAccion('admin_listar_usuarios');
+    if (!json.ok) { showToast(json.error || 'No se pudo cargar la lista de usuarios', 'error'); return; }
+    renderUsuariosTabla(json.usuarios || []);
+  } catch (err) {
+    console.error(err);
+    if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="empty-row">Error al cargar usuarios</td></tr>';
+  }
+}
+
+function renderUsuariosTabla(lista) {
+  const tbody = document.getElementById('usuarios-body');
+  if (!tbody) return;
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-row">Sin usuarios registrados</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map(u => `
+    <tr>
+      <td data-label="Usuario" class="mono">${esc(u.usuario)}</td>
+      <td data-label="Nombre"><strong>${esc(u.nombre)}</strong></td>
+      <td data-label="Rol">${esc(u.rol)}</td>
+      <td data-label="Estado">
+        <span class="badge ${u.activo ? 'badge-green' : 'badge-red'}">${u.activo ? 'Activo' : 'Inactivo'}</span>
+        ${u.debeCambiarPassword ? '<span class="badge badge-yellow" title="Debe cambiar su contraseña">Temporal</span>' : ''}
+      </td>
+      <td>
+        <div class="action-btns">
+          <button class="btn-action" onclick="abrirResetPassword('${esc(u.usuario)}')" title="Restablecer contraseña"><i data-feather="key"></i></button>
+          <button class="btn-action" onclick="confirmarRevocarSesiones('${esc(u.usuario)}')" title="Revocar sesiones activas"><i data-feather="log-out"></i></button>
+          <button class="btn-action ${u.activo ? 'delete' : ''}" onclick="confirmarCambiarActivoUsuario('${esc(u.usuario)}', ${!u.activo})" title="${u.activo ? 'Desactivar' : 'Activar'}">
+            <i data-feather="${u.activo ? 'user-x' : 'user-check'}"></i>
+          </button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+  feather.replace();
+}
+
+function abrirModalUsuario() {
+  document.getElementById('usuario-nuevo-login').value = '';
+  document.getElementById('usuario-nuevo-nombre').value = '';
+  document.getElementById('usuario-nuevo-rol').value = 'empleado';
+  document.getElementById('usuario-nuevo-password').value = '';
+  document.getElementById('usuario-nuevo-error').classList.add('hidden');
+  openModal('modal-usuario');
+}
+
+async function guardarUsuarioNuevo() {
+  const usuario   = document.getElementById('usuario-nuevo-login').value.trim();
+  const nombre    = document.getElementById('usuario-nuevo-nombre').value.trim();
+  const rol       = document.getElementById('usuario-nuevo-rol').value;
+  const password  = document.getElementById('usuario-nuevo-password').value;
+  const error     = document.getElementById('usuario-nuevo-error');
+  error.classList.add('hidden');
+
+  if (!usuario || !nombre || password.length < 8) {
+    error.querySelector('span').textContent = 'Completa todos los campos; la contraseña debe tener al menos 8 caracteres.';
+    error.classList.remove('hidden');
+    return;
+  }
+
+  const btn = document.getElementById('usuario-nuevo-btn');
+  btn.disabled = true;
+  try {
+    const json = await apiAccion('admin_crear_usuario', { usuario, nombre, rol, passwordInicial: password });
+    if (!json.ok) {
+      error.querySelector('span').textContent = json.error || 'No se pudo crear el usuario.';
+      error.classList.remove('hidden');
+      return;
+    }
+    showToast(`Usuario "${usuario}" creado correctamente`, 'success');
+    closeAllModals();
+    cargarYRenderUsuarios();
+  } catch (err) {
+    error.querySelector('span').textContent = 'Error de conexión. Intenta de nuevo.';
+    error.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+let _resetPasswordUsuarioObjetivo = null;
+
+function abrirResetPassword(usuarioLogin) {
+  _resetPasswordUsuarioObjetivo = usuarioLogin;
+  setText('reset-pass-usuario', usuarioLogin);
+  document.getElementById('reset-pass-nueva').value = '';
+  document.getElementById('reset-pass-error').classList.add('hidden');
+  openModal('modal-reset-password');
+}
+
+async function confirmarResetPassword() {
+  const nueva = document.getElementById('reset-pass-nueva').value;
+  const error = document.getElementById('reset-pass-error');
+  if (nueva.length < 8) {
+    error.querySelector('span').textContent = 'La contraseña debe tener al menos 8 caracteres.';
+    error.classList.remove('hidden');
+    return;
+  }
+  try {
+    const json = await apiAccion('admin_reset_password', { usuario: _resetPasswordUsuarioObjetivo, nueva });
+    if (!json.ok) {
+      error.querySelector('span').textContent = json.error || 'No se pudo restablecer la contraseña.';
+      error.classList.remove('hidden');
+      return;
+    }
+    showToast(`Contraseña temporal establecida para "${_resetPasswordUsuarioObjetivo}"`, 'success');
+    closeAllModals();
+    cargarYRenderUsuarios();
+  } catch (err) {
+    error.querySelector('span').textContent = 'Error de conexión. Intenta de nuevo.';
+    error.classList.remove('hidden');
+  }
+}
+
+function confirmarRevocarSesiones(usuarioLogin) {
+  configurarModalConfirmar({
+    titulo: 'Revocar Sesiones',
+    texto: `¿Revocar todas las sesiones activas de "${esc(usuarioLogin)}"? Deberá iniciar sesión de nuevo en todos sus dispositivos.`,
+    textoBoton: 'Revocar',
+    icono: 'log-out',
+    claseBoton: 'primary',
+  });
+  document.getElementById('confirm-btn').onclick = async () => {
+    try {
+      const json = await apiAccion('admin_revocar_sesiones', { usuario: usuarioLogin });
+      if (!json.ok) { showToast(json.error || 'No se pudo revocar la sesión', 'error'); return; }
+      showToast('Sesiones revocadas correctamente', 'success');
+      closeAllModals();
+    } catch { showToast('Error de conexión', 'error'); }
+  };
+  openModal('modal-confirmar');
+  feather.replace();
+}
+
+function confirmarCambiarActivoUsuario(usuarioLogin, nuevoActivo) {
+  const accion = nuevoActivo ? 'activar' : 'desactivar';
+  configurarModalConfirmar({
+    titulo: nuevoActivo ? 'Activar Usuario' : 'Desactivar Usuario',
+    texto: `¿Deseas ${accion} al usuario "${esc(usuarioLogin)}"?`,
+    textoBoton: nuevoActivo ? 'Activar' : 'Desactivar',
+    icono: nuevoActivo ? 'user-check' : 'user-x',
+    claseBoton: nuevoActivo ? 'primary' : 'danger',
+  });
+  document.getElementById('confirm-btn').onclick = async () => {
+    try {
+      const json = await apiAccion('admin_set_activo', { usuario: usuarioLogin, activo: nuevoActivo });
+      if (!json.ok) { showToast(json.error || `No se pudo ${accion} al usuario`, 'error'); return; }
+      showToast(`Usuario "${usuarioLogin}" ${nuevoActivo ? 'activado' : 'desactivado'}`, 'success');
+      closeAllModals();
+      cargarYRenderUsuarios();
+    } catch { showToast('Error de conexión', 'error'); }
+  };
+  openModal('modal-confirmar');
+  feather.replace();
 }
 
 async function cargarAuditoria() {
@@ -2960,6 +3296,21 @@ function setEmailStatus(msg, tipo) {
    🗑️  ELIMINACIÓN GENERAL
 ══════════════════════════════════════════════════════════════ */
 
+/**
+ * Configura el texto/ícono del modal genérico de confirmación. El modal se
+ * reutiliza para eliminar, desactivar, activar y revocar sesiones — cada
+ * llamada debe fijar explícitamente los 5 valores para no heredar el estado
+ * de un uso anterior (p. ej. que "Desactivar" muestre el título "Eliminar").
+ */
+function configurarModalConfirmar({ titulo, texto, textoBoton, icono, claseBoton }) {
+  setText('confirm-title', titulo);
+  setHTML('confirm-text', texto);
+  setText('confirm-btn-text', textoBoton);
+  const btn = document.getElementById('confirm-btn');
+  btn.className = 'btn-' + claseBoton;
+  document.getElementById('confirm-btn-icon').setAttribute('data-feather', icono);
+}
+
 function confirmarEliminar(tipo, id) {
   // Obtener nombre desde STATE para evitar bugs con apóstrofes en onclick
   let nombre = '';
@@ -2979,9 +3330,14 @@ function confirmarEliminar(tipo, id) {
     historial: '¿Eliminar este registro clínico? Esta acción no se puede deshacer.',
     producto:  `¿Eliminar el producto "${esc(nombre)}"? Esta acción no se puede deshacer.`,
   };
-  const confirmBtn = document.getElementById('confirm-btn');
-  setHTML('confirm-text', textos[tipo] || '¿Confirmar eliminación?');
-  confirmBtn.onclick = () => {
+  configurarModalConfirmar({
+    titulo: 'Confirmar Eliminación',
+    texto: textos[tipo] || '¿Confirmar eliminación?',
+    textoBoton: 'Eliminar',
+    icono: 'trash-2',
+    claseBoton: 'danger',
+  });
+  document.getElementById('confirm-btn').onclick = () => {
     if (tipo === 'cliente')   eliminarCliente(id);
     if (tipo === 'venta')     eliminarVenta(id);
     if (tipo === 'pago')      eliminarPago(id);
@@ -2989,6 +3345,7 @@ function confirmarEliminar(tipo, id) {
     if (tipo === 'producto')  eliminarProducto(id);
   };
   openModal('modal-confirmar');
+  feather.replace();
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -3200,14 +3557,17 @@ const SECTION_LABELS = {
   adeudos:   'Control de Adeudos',
   garantias: 'Garantías y Cambios',
   inventario: 'Inventario',
+  usuarios:   'Usuarios',
   auditoria:  'Auditoría',
 };
 
+const SECCIONES_SOLO_ADMIN = { usuarios: 'la gestión de usuarios', auditoria: 'la auditoría' };
+
 function navigateTo(seccion) {
-  if (seccion === 'auditoria') {
+  if (SECCIONES_SOLO_ADMIN[seccion]) {
     const rol = (STATE.usuario?.rol || '').toLowerCase();
     if (rol !== 'admin' && rol !== 'administrador') {
-      showToast('Solo administradores pueden ver la auditoría', 'warning');
+      showToast(`Solo administradores pueden ver ${SECCIONES_SOLO_ADMIN[seccion]}`, 'warning');
       return;
     }
   }
@@ -3227,6 +3587,7 @@ function navigateTo(seccion) {
   if (seccion === 'garantias')  filterGarantias();
   if (seccion === 'inventario') filterInventario();
   if (seccion === 'auditoria')  filterAuditoria();
+  if (seccion === 'usuarios')   cargarYRenderUsuarios();
 
   if (window.innerWidth <= 768) {
     document.getElementById('sidebar').classList.remove('mobile-open');

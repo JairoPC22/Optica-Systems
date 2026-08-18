@@ -3,8 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/x-icon" href="Logo-optica.ico" />
-  <meta http-equiv="Content-Security-Policy" 
-        content="script-src * 'unsafe-inline' 'unsafe-eval'; connect-src *;">
+  <!-- CSP acotada a los orígenes realmente usados por la app. Se mantiene
+       'unsafe-inline' en script-src/style-src porque el HTML usa atributos
+       onclick= y style= inline de forma extensa (reescribirlos a
+       addEventListener/clases es un cambio de gran alcance que excede esta
+       revisión); sí se retira 'unsafe-eval' y el comodín '*', que no eran
+       necesarios y ampliaban innecesariamente la superficie de ataque. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self';
+                 script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+                 style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+                 font-src 'self' https://fonts.gstatic.com;
+                 img-src 'self' data:;
+                 connect-src 'self' https://script.google.com https://script.googleusercontent.com https://api.emailjs.com;
+                 object-src 'none';
+                 base-uri 'self';
+                 frame-ancestors 'self';">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>Óptica Aurora — Sistema Interno</title>
   <link rel="manifest" href="manifest.json">
@@ -12,7 +26,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Óptica Aurora">
-  <link rel="apple-touch-icon" href="Logo-optica.ico">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <script>
   if (localStorage.getItem('aurora_dark') === '1') {
     document.documentElement.classList.add('dark-preload');
@@ -24,11 +38,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <!-- EmailJS -->
-  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4.4.1/dist/email.min.js"
+          integrity="sha384-SALc35EccAf6RzGw4iNsyj7kTPr33K7RoGzYu+7heZhT8s0GZouafRiCg1qy44AS" crossorigin="anonymous"></script>
   <!-- Icons (Feather) -->
-<script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/feather-icons@4.29.2/dist/feather.min.js"
+        integrity="sha384-qEqAs1VsN9WH2myXDbiP2wGGIttL9bMRZBKCl54ZnzpDlVqbYANP9vMaoT/wvQcf" crossorigin="anonymous"></script>
 <!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"
+        integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -70,7 +87,7 @@
             </button>
           </div>
         </div>
-        <div id="login-error" class="login-error hidden">
+        <div id="login-error" class="login-error hidden" role="alert" aria-live="assertive">
           <i data-feather="alert-circle"></i>
           <span>Usuario o contraseña incorrectos.</span>
         </div>
@@ -158,6 +175,10 @@
         </button>
 
         <div class="nav-section-label">SISTEMA</div>
+        <button class="nav-item" id="nav-item-usuarios" onclick="navigateTo('usuarios')" data-section="usuarios">
+          <i data-feather="user-check"></i>
+          <span>Usuarios</span>
+        </button>
         <button class="nav-item" id="nav-item-auditoria" onclick="navigateTo('auditoria')" data-section="auditoria">
           <i data-feather="activity"></i>
           <span>Auditoría</span>
@@ -165,6 +186,10 @@
       </nav>
 
       <div class="sidebar-footer">
+        <button class="btn-logout" onclick="abrirCambioPassword()" style="margin-bottom:.4rem;">
+          <i data-feather="key"></i>
+          <span>Cambiar contraseña</span>
+        </button>
         <button class="btn-logout" onclick="handleLogout()">
           <i data-feather="log-out"></i>
           <span>Cerrar sesión</span>
@@ -717,6 +742,40 @@
       <!-- ══════════════════════════════════════════════
            📋 SECCIÓN: AUDITORÍA
       ══════════════════════════════════════════════ -->
+      <!-- ══════════════════════════════════════════════
+           👤 SECCIÓN: USUARIOS (solo administradores)
+      ══════════════════════════════════════════════ -->
+      <section id="section-usuarios" class="section">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">Usuarios del Sistema</h1>
+            <p class="section-desc">Altas, bajas y contraseñas del personal con acceso</p>
+          </div>
+          <button class="btn-primary" onclick="abrirModalUsuario()">
+            <i data-feather="user-plus"></i> Nuevo Usuario
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Usuario</th>
+                  <th>Nombre</th>
+                  <th>Rol</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="usuarios-body">
+                <tr><td colspan="5" class="empty-row">Cargando usuarios...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
       <section id="section-auditoria" class="section">
         <div class="section-header">
           <div>
@@ -866,32 +925,32 @@
           <input type="text" id="cliente-nombre" placeholder="Ej: María García López" required />
         </div>
         <div class="form-group">
-          <label>Teléfono *</label>
+          <label for="cliente-telefono">Teléfono *</label>
           <input type="tel" id="cliente-telefono" placeholder="Ej: 2281234567" required />
         </div>
         <div class="form-group">
-          <label>Correo Electrónico</label>
+          <label for="cliente-email">Correo Electrónico</label>
           <input type="email" id="cliente-email" placeholder="correo@ejemplo.com" />
         </div>
         <div class="form-group">
-          <label>Edad</label>
+          <label for="cliente-edad">Edad</label>
           <input type="number" id="cliente-edad" placeholder="Ej: 35" min="1" max="120" />
         </div>
         <div class="form-group">
-          <label>Ocupación</label>
+          <label for="cliente-ocupacion">Ocupación</label>
           <input type="text" id="cliente-ocupacion" placeholder="Ej: Docente, Contador..." />
         </div>
         <div class="form-group">
-          <label>Dirección</label>
+          <label for="cliente-direccion">Dirección</label>
           <input type="text" id="cliente-direccion" placeholder="Calle, colonia, ciudad..." />
         </div>
       </div>
       <div class="form-group">
-  <label>Escolaridad</label>
+  <label for="cliente-escolaridad">Escolaridad</label>
   <input type="text" id="cliente-escolaridad" placeholder="Ej: Licenciatura, Preparatoria..." />
 </div>
 <div class="form-group">
-  <label>Actividades que realiza</label>
+  <label for="cliente-actividades">Actividades que realiza</label>
   <input type="text" id="cliente-actividades" placeholder="Ej: Lectura, trabajo en pantalla..." />
 </div>
     </div>
@@ -994,13 +1053,13 @@
     <div class="modal-body">
       <input type="hidden" id="historial-id" />
       <div class="form-group">
-        <label>Cliente *</label>
+        <label for="historial-cliente">Cliente *</label>
         <select id="historial-cliente" required>
           <option value="">— Seleccionar cliente —</option>
         </select>
       </div>
       <div class="form-group">
-        <label>Fecha</label>
+        <label for="historial-fecha">Fecha</label>
         <input type="date" id="historial-fecha" />
       </div>
 
@@ -1013,7 +1072,7 @@
         <div class="acordeon-body">
           <div class="clinica-section">
             <div class="form-group">
-              <label>Motivo de su visita</label>
+              <label for="historial-motivo">Motivo de su visita</label>
               <textarea id="historial-motivo" rows="2" placeholder="¿Por qué acude hoy?"></textarea>
             </div>
             <h4 class="clinica-title" style="margin-top:.8rem">Síntomas Oculares</h4>
@@ -1041,15 +1100,15 @@
             </div>
             <div class="form-grid-2" style="margin-top:.8rem">
               <div class="form-group">
-                <label>¿Desde cuándo presenta molestias?</label>
+                <label for="historial-desde-cuando">¿Desde cuándo presenta molestias?</label>
                 <input type="text" id="historial-desde-cuando" placeholder="Ej: 2 semanas, 1 mes..." />
               </div>
               <div class="form-group">
-                <label>¿A qué lo atribuye?</label>
+                <label for="historial-atribuye">¿A qué lo atribuye?</label>
                 <input type="text" id="historial-atribuye" placeholder="Ej: cansancio, pantallas..." />
               </div>
               <div class="form-group">
-                <label>¿Ha ido en aumento?</label>
+                <label for="historial-aumento">¿Ha ido en aumento?</label>
                 <select id="historial-aumento">
                   <option value="">— Seleccionar —</option>
                   <option value="Sí">Sí</option>
@@ -1057,7 +1116,7 @@
                 </select>
               </div>
               <div class="form-group">
-                <label>¿Ha tomado algún medicamento?</label>
+                <label for="historial-medicamento">¿Ha tomado algún medicamento?</label>
                 <input type="text" id="historial-medicamento" placeholder="Nombre del medicamento o 'Ninguno'" />
               </div>
             </div>
@@ -1075,11 +1134,11 @@
           <div class="clinica-section">
             <div class="form-grid-2">
               <div class="form-group">
-                <label>Último examen de la vista</label>
+                <label for="historial-ultimo-examen">Último examen de la vista</label>
                 <input type="text" id="historial-ultimo-examen" placeholder="Ej: hace 2 años, nunca..." />
               </div>
               <div class="form-group">
-                <label>¿Utiliza lentes?</label>
+                <label for="historial-usa-lentes">¿Utiliza lentes?</label>
                 <select id="historial-usa-lentes">
                   <option value="">— Seleccionar —</option>
                   <option value="Sí">Sí</option>
@@ -1087,15 +1146,15 @@
                 </select>
               </div>
               <div class="form-group">
-                <label>¿Desde cuándo usa lentes?</label>
+                <label for="historial-tiempo-lentes">¿Desde cuándo usa lentes?</label>
                 <input type="text" id="historial-tiempo-lentes" placeholder="Ej: 5 años..." />
               </div>
               <div class="form-group">
-                <label>Cambios de graduación</label>
+                <label for="historial-cambios-graduacion">Cambios de graduación</label>
                 <input type="number" id="historial-cambios-graduacion" placeholder="Número de cambios" min="0" />
               </div>
               <div class="form-group">
-                <label>¿Utiliza lentes de contacto?</label>
+                <label for="historial-usa-contacto">¿Utiliza lentes de contacto?</label>
                 <select id="historial-usa-contacto">
                   <option value="">— Seleccionar —</option>
                   <option value="Sí">Sí</option>
@@ -1103,7 +1162,7 @@
                 </select>
               </div>
               <div class="form-group">
-                <label>¿Desde cuándo usa lentes de contacto?</label>
+                <label for="historial-tiempo-contacto">¿Desde cuándo usa lentes de contacto?</label>
                 <input type="text" id="historial-tiempo-contacto" placeholder="Ej: 1 año..." />
               </div>
             </div>
@@ -1128,7 +1187,7 @@
               <label class="checkbox-label"><input type="checkbox" name="antecedente" value="Terigión"> Terigión</label>
             </div>
             <div class="form-group" style="margin-top:.8rem">
-              <label>¿Alguna cirugía ocular?</label>
+              <label for="historial-cirugia">¿Alguna cirugía ocular?</label>
               <input type="text" id="historial-cirugia" placeholder="Describe o escribe 'Ninguna'" />
             </div>
           </div>
@@ -1145,23 +1204,23 @@
           <div class="clinica-section">
             <div class="form-grid-2">
               <div class="form-group">
-                <label>Párpados</label>
+                <label for="historial-parpados">Párpados</label>
                 <input type="text" id="historial-parpados" placeholder="Normal / Alterado..." />
               </div>
               <div class="form-group">
-                <label>Pestañas</label>
+                <label for="historial-pestanas">Pestañas</label>
                 <input type="text" id="historial-pestanas" placeholder="Normal / Alterado..." />
               </div>
               <div class="form-group">
-                <label>Cejas</label>
+                <label for="historial-cejas">Cejas</label>
                 <input type="text" id="historial-cejas" placeholder="Normal / Alterado..." />
               </div>
               <div class="form-group">
-                <label>Conjuntiva</label>
+                <label for="historial-conjuntiva">Conjuntiva</label>
                 <input type="text" id="historial-conjuntiva" placeholder="Normal / Alterado..." />
               </div>
               <div class="form-group" style="grid-column:1/-1">
-                <label>Oftalmoscopía y Retinoscopia</label>
+                <label for="historial-oftalmoscopia">Oftalmoscopía y Retinoscopia</label>
                 <textarea id="historial-oftalmoscopia" rows="2" placeholder="Hallazgos..."></textarea>
               </div>
             </div>
@@ -1220,19 +1279,19 @@
         <div class="acordeon-body">
           <div class="clinica-section">
             <div class="form-grid-2">
-              <div class="form-group"><label>PH 20/ OD</label><input type="text" id="ph-od" placeholder="Ej: 20" /></div>
-              <div class="form-group"><label>PH 20/ OI</label><input type="text" id="ph-oi" placeholder="Ej: 20" /></div>
-              <div class="form-group"><label>RELOJ OD</label><input type="text" id="reloj-od" /></div>
-              <div class="form-group"><label>RELOJ OI</label><input type="text" id="reloj-oi" /></div>
-              <div class="form-group"><label>BICRO OD</label><input type="text" id="bicro-od" /></div>
-              <div class="form-group"><label>BICRO OI</label><input type="text" id="bicro-oi" /></div>
-              <div class="form-group"><label>MPP OD</label><input type="text" id="mpp-od" /></div>
-              <div class="form-group"><label>MPP OI</label><input type="text" id="mpp-oi" /></div>
-              <div class="form-group"><label>Altura</label><input type="text" id="historial-altura" placeholder="mm" /></div>
-              <div class="form-group"><label>Distancia Interpupilar</label><input type="text" id="historial-dip" placeholder="mm" /></div>
-              <div class="form-group"><label>Dist. Naso Pupilar OD</label><input type="text" id="historial-dnp-od" placeholder="mm" /></div>
-              <div class="form-group"><label>Dist. Naso Pupilar OI</label><input type="text" id="historial-dnp-oi" placeholder="mm" /></div>
-              <div class="form-group"><label>ADD</label><input type="text" id="historial-add" /></div>
+              <div class="form-group"><label for="ph-od">PH 20/ OD</label><input type="text" id="ph-od" placeholder="Ej: 20" /></div>
+              <div class="form-group"><label for="ph-oi">PH 20/ OI</label><input type="text" id="ph-oi" placeholder="Ej: 20" /></div>
+              <div class="form-group"><label for="reloj-od">RELOJ OD</label><input type="text" id="reloj-od" /></div>
+              <div class="form-group"><label for="reloj-oi">RELOJ OI</label><input type="text" id="reloj-oi" /></div>
+              <div class="form-group"><label for="bicro-od">BICRO OD</label><input type="text" id="bicro-od" /></div>
+              <div class="form-group"><label for="bicro-oi">BICRO OI</label><input type="text" id="bicro-oi" /></div>
+              <div class="form-group"><label for="mpp-od">MPP OD</label><input type="text" id="mpp-od" /></div>
+              <div class="form-group"><label for="mpp-oi">MPP OI</label><input type="text" id="mpp-oi" /></div>
+              <div class="form-group"><label for="historial-altura">Altura</label><input type="text" id="historial-altura" placeholder="mm" /></div>
+              <div class="form-group"><label for="historial-dip">Distancia Interpupilar</label><input type="text" id="historial-dip" placeholder="mm" /></div>
+              <div class="form-group"><label for="historial-dnp-od">Dist. Naso Pupilar OD</label><input type="text" id="historial-dnp-od" placeholder="mm" /></div>
+              <div class="form-group"><label for="historial-dnp-oi">Dist. Naso Pupilar OI</label><input type="text" id="historial-dnp-oi" placeholder="mm" /></div>
+              <div class="form-group"><label for="historial-add">ADD</label><input type="text" id="historial-add" /></div>
             </div>
           </div>
         </div>
@@ -1247,15 +1306,15 @@
         <div class="acordeon-body">
           <div class="clinica-section">
             <div class="form-grid-2">
-              <div class="form-group"><label>Grad. anterior OD</label><input type="text" id="historial-grad-ant-od" /></div>
-              <div class="form-group"><label>Grad. anterior OI</label><input type="text" id="historial-grad-ant-oi" /></div>
-              <div class="form-group"><label>Eje astigmático OD</label><input type="text" id="historial-eje-od" placeholder="°" /></div>
-              <div class="form-group"><label>Eje astigmático OI</label><input type="text" id="historial-eje-oi" placeholder="°" /></div>
-              <div class="form-group"><label>Prueba ambulatoria</label><input type="text" id="historial-prueba-amb" placeholder="Ej: Sí, No, Pendiente..." /></div>
-              <div class="form-group"><label>RX Final OD</label><input type="text" id="historial-rx-od" placeholder="Esfera / Cilindro / Eje" /></div>
-              <div class="form-group"><label>RX Final OI</label><input type="text" id="historial-rx-oi" placeholder="Esfera / Cilindro / Eje" /></div>
-              <div class="form-group"><label>ADD (RX Final)</label><input type="text" id="historial-rx-add" /></div>
-              <div class="form-group"><label>Material de lente</label><input type="text" id="historial-material" placeholder="Ej: CR-39, policarbonato..." /></div>
+              <div class="form-group"><label for="historial-grad-ant-od">Grad. anterior OD</label><input type="text" id="historial-grad-ant-od" /></div>
+              <div class="form-group"><label for="historial-grad-ant-oi">Grad. anterior OI</label><input type="text" id="historial-grad-ant-oi" /></div>
+              <div class="form-group"><label for="historial-eje-od">Eje astigmático OD</label><input type="text" id="historial-eje-od" placeholder="°" /></div>
+              <div class="form-group"><label for="historial-eje-oi">Eje astigmático OI</label><input type="text" id="historial-eje-oi" placeholder="°" /></div>
+              <div class="form-group"><label for="historial-prueba-amb">Prueba ambulatoria</label><input type="text" id="historial-prueba-amb" placeholder="Ej: Sí, No, Pendiente..." /></div>
+              <div class="form-group"><label for="historial-rx-od">RX Final OD</label><input type="text" id="historial-rx-od" placeholder="Esfera / Cilindro / Eje" /></div>
+              <div class="form-group"><label for="historial-rx-oi">RX Final OI</label><input type="text" id="historial-rx-oi" placeholder="Esfera / Cilindro / Eje" /></div>
+              <div class="form-group"><label for="historial-rx-add">ADD (RX Final)</label><input type="text" id="historial-rx-add" /></div>
+              <div class="form-group"><label for="historial-material">Material de lente</label><input type="text" id="historial-material" placeholder="Ej: CR-39, policarbonato..." /></div>
             </div>
           </div>
         </div>
@@ -1270,11 +1329,11 @@
         <div class="acordeon-body">
           <div class="form-grid-2" style="padding:.5rem 0;">
             <div class="form-group">
-              <label>Diagnóstico</label>
+              <label for="historial-diagnostico">Diagnóstico</label>
               <textarea id="historial-diagnostico" rows="3" placeholder="Diagnóstico del optometrista..."></textarea>
             </div>
             <div class="form-group">
-              <label>Observaciones</label>
+              <label for="historial-observaciones">Observaciones</label>
               <textarea id="historial-observaciones" rows="3" placeholder="Observaciones adicionales..."></textarea>
             </div>
           </div>
@@ -1300,13 +1359,13 @@
       <input type="hidden" id="venta-id" />
       <div class="form-grid-2">
         <div class="form-group">
-          <label>Cliente *</label>
+          <label for="venta-cliente">Cliente *</label>
           <select id="venta-cliente" required>
             <option value="">— Seleccionar cliente —</option>
           </select>
         </div>
         <div class="form-group">
-          <label>Tipo de Venta *</label>
+          <label for="venta-tipo">Tipo de Venta *</label>
           <select id="venta-tipo" onchange="handleTipoVenta()">
             <option value="normal">Venta Normal</option>
             <option value="garantia">Garantía</option>
@@ -1314,46 +1373,46 @@
           </select>
         </div>
         <div class="form-group" style="grid-column:1/-1">
-          <label>Producto del Inventario</label>
+          <label for="venta-producto">Producto del Inventario</label>
           <select id="venta-producto" onchange="onProductoChange()">
             <option value="">— Seleccionar producto (opcional) —</option>
           </select>
           <div id="venta-stock-display" style="margin-top:.4rem;"></div>
         </div>
         <div class="form-group">
-          <label>Tipo de Lente *</label>
+          <label for="venta-lente">Tipo de Lente *</label>
           <input type="text" id="venta-lente" placeholder="Ej: Monofocal, Bifocal, Progresivo..." required />
         </div>
         <div class="form-group">
-          <label>Cantidad</label>
+          <label for="venta-cantidad">Cantidad</label>
           <input type="number" id="venta-cantidad" value="1" min="1" step="1" oninput="calcularTotal()" />
         </div>
         <div class="form-group">
-          <label>Fecha</label>
+          <label for="venta-fecha">Fecha</label>
           <input type="date" id="venta-fecha" />
         </div>
         <div class="form-group">
-          <label>Precio Total ($)</label>
+          <label for="venta-precio">Precio Total ($)</label>
           <input type="number" id="venta-precio" placeholder="0.00" min="0" step="0.01" oninput="calcularTotal()" />
         </div>
         <div class="form-group">
-          <label>Descuento ($)</label>
+          <label for="venta-descuento">Descuento ($)</label>
           <input type="number" id="venta-descuento" placeholder="0.00" min="0" step="0.01" value="0" oninput="calcularTotal()" />
         </div>
         <div class="form-group">
-          <label>Total Final</label>
+          <label for="venta-total">Total Final</label>
           <input type="text" id="venta-total" class="input-readonly" readonly placeholder="$0.00" />
         </div>
         <div class="form-group">
-          <label>Anticipo ($)</label>
+          <label for="venta-anticipo">Anticipo ($)</label>
           <input type="number" id="venta-anticipo" placeholder="0.00" min="0" step="0.01" oninput="calcularRestante()" />
         </div>
         <div class="form-group">
-          <label>Restante</label>
+          <label for="venta-restante">Restante</label>
           <input type="text" id="venta-restante" class="input-readonly" readonly placeholder="$0.00" />
         </div>
         <div class="form-group">
-          <label>Método de Pago</label>
+          <label for="venta-metodo">Método de Pago</label>
           <select id="venta-metodo">
             <option value="efectivo">Efectivo</option>
             <option value="tarjeta">Tarjeta</option>
@@ -1369,11 +1428,11 @@
           En cambios, si el nuevo producto tiene diferente precio, registra aquí la diferencia.
         </div>
         <div class="form-group">
-          <label>Diferencia de Precio ($)</label>
+          <label for="venta-diferencia">Diferencia de Precio ($)</label>
           <input type="number" id="venta-diferencia" placeholder="0.00" step="0.01" oninput="calcularTotal()" />
         </div>
         <div class="form-group">
-          <label>Descripción del Cambio</label>
+          <label for="venta-cambio-desc">Descripción del Cambio</label>
           <textarea id="venta-cambio-desc" rows="2" placeholder="Motivo o descripción del cambio..."></textarea>
         </div>
       </div>
@@ -1396,13 +1455,13 @@
       <input type="hidden" id="pago-venta-id" />
       <div class="form-grid-2">
         <div class="form-group">
-          <label>Cliente *</label>
+          <label for="pago-cliente">Cliente *</label>
           <select id="pago-cliente" onchange="loadVentasDeCliente()" required>
             <option value="">— Seleccionar cliente —</option>
           </select>
         </div>
         <div class="form-group">
-          <label>Venta a Pagar *</label>
+          <label for="pago-venta">Venta a Pagar *</label>
           <select id="pago-venta" onchange="loadSaldoVenta()" required>
             <option value="">— Seleccionar venta —</option>
           </select>
@@ -1421,11 +1480,11 @@
       </div>
       <div class="form-grid-2">
         <div class="form-group">
-          <label>Monto a Pagar ($) *</label>
+          <label for="pago-monto">Monto a Pagar ($) *</label>
           <input type="number" id="pago-monto" placeholder="0.00" min="0.01" step="0.01" required />
         </div>
         <div class="form-group">
-          <label>Método de Pago</label>
+          <label for="pago-metodo">Método de Pago</label>
           <select id="pago-metodo">
             <option value="efectivo">Efectivo</option>
             <option value="tarjeta">Tarjeta</option>
@@ -1433,11 +1492,11 @@
           </select>
         </div>
         <div class="form-group">
-          <label>Fecha</label>
+          <label for="pago-fecha">Fecha</label>
           <input type="date" id="pago-fecha" />
         </div>
         <div class="form-group">
-          <label>Notas</label>
+          <label for="pago-notas">Notas</label>
           <input type="text" id="pago-notas" placeholder="Observaciones del pago..." />
         </div>
       </div>
@@ -1459,7 +1518,7 @@
       <input type="hidden" id="producto-id" />
       <div class="form-grid-2">
         <div class="form-group" style="grid-column:1/-1">
-          <label>Nombre del Producto *</label>
+          <label for="producto-nombre">Nombre del Producto *</label>
           <input type="text" id="producto-nombre" placeholder="Ej: Armazón Titanio Redondo" required />
         </div>
 
@@ -1484,7 +1543,7 @@
         </div>
 
         <div class="form-group">
-          <label>Categoría *</label>
+          <label for="producto-categoria">Categoría *</label>
           <select id="producto-categoria">
             <option value="armazon">Armazón</option>
             <option value="lente">Lente</option>
@@ -1495,40 +1554,40 @@
           </select>
         </div>
         <div class="form-group">
-          <label>Marca</label>
+          <label for="producto-marca">Marca</label>
           <input type="text" id="producto-marca" placeholder="Ej: Ray-Ban, Oakley..." />
         </div>
         <div class="form-group">
-          <label>Código / SKU</label>
+          <label for="producto-sku">Código / SKU</label>
           <input type="text" id="producto-sku" placeholder="Ej: ARM-001" />
         </div>
         <div class="form-group">
-          <label>Color / Modelo</label>
+          <label for="producto-color">Color / Modelo</label>
           <input type="text" id="producto-color" placeholder="Ej: Negro, Dorado..." />
         </div>
         <div class="form-group">
-          <label>Stock Actual *</label>
+          <label for="producto-stock">Stock Actual *</label>
           <input type="number" id="producto-stock" placeholder="0" min="0" required />
         </div>
         <div class="form-group">
-          <label>Stock Mínimo (alerta)</label>
+          <label for="producto-stock-min">Stock Mínimo (alerta)</label>
           <input type="number" id="producto-stock-min" placeholder="3" min="0" value="3" />
         </div>
         <div class="form-group">
-          <label>Precio de Costo ($)</label>
+          <label for="producto-precio-costo">Precio de Costo ($)</label>
           <input type="number" id="producto-precio-costo" placeholder="0.00" min="0" step="0.01" />
         </div>
         <div class="form-group">
-          <label>Precio de Venta ($)</label>
+          <label for="producto-precio-venta">Precio de Venta ($)</label>
           <input type="number" id="producto-precio-venta" placeholder="0.00" min="0" step="0.01" />
         </div>
         <div class="form-group">
-          <label>Proveedor</label>
+          <label for="producto-proveedor">Proveedor</label>
           <input type="text" id="producto-proveedor" placeholder="Nombre del proveedor..." />
         </div>
       </div>
       <div class="form-group">
-        <label>Notas</label>
+        <label for="producto-notas">Notas</label>
         <textarea id="producto-notas" rows="2" placeholder="Descripción, características adicionales..."></textarea>
       </div>
     </div>
@@ -1550,7 +1609,7 @@
       <input type="hidden" id="ajuste-producto-id" />
       <div id="ajuste-producto-info" class="pago-resumen" style="margin-bottom:1rem;"></div>
       <div class="form-group">
-        <label>Tipo de Ajuste</label>
+        <label for="ajuste-tipo">Tipo de Ajuste</label>
         <select id="ajuste-tipo">
           <option value="entrada">➕ Entrada (recibí mercancía)</option>
           <option value="salida">➖ Salida (venta / baja)</option>
@@ -1558,11 +1617,11 @@
         </select>
       </div>
       <div class="form-group">
-        <label>Cantidad</label>
+        <label for="ajuste-cantidad">Cantidad</label>
         <input type="number" id="ajuste-cantidad" placeholder="0" min="0" />
       </div>
       <div class="form-group">
-        <label>Motivo</label>
+        <label for="ajuste-motivo">Motivo</label>
         <input type="text" id="ajuste-motivo" placeholder="Ej: Compra a proveedor, venta directa..." />
       </div>
     </div>
@@ -1582,15 +1641,15 @@
     <div class="modal-body">
       <div class="form-grid-2">
         <div class="form-group">
-          <label>Fecha Desde</label>
+          <label for="export-fecha-desde">Fecha Desde</label>
           <input type="date" id="export-fecha-desde" />
         </div>
         <div class="form-group">
-          <label>Fecha Hasta</label>
+          <label for="export-fecha-hasta">Fecha Hasta</label>
           <input type="date" id="export-fecha-hasta" />
         </div>
         <div class="form-group" style="grid-column:1/-1">
-          <label>Empleado / Registrado por</label>
+          <label for="export-empleado">Empleado / Registrado por</label>
           <select id="export-empleado">
             <option value="">— Todos los empleados —</option>
           </select>
@@ -1611,7 +1670,7 @@
   </div>
   <div class="modal modal-sm" id="modal-confirmar">
     <div class="modal-header">
-      <h2>Confirmar Eliminación</h2>
+      <h2 id="confirm-title">Confirmar Eliminación</h2>
       <button class="modal-close" onclick="closeAllModals()"><i data-feather="x"></i></button>
     </div>
     <div class="modal-body">
@@ -1621,7 +1680,116 @@
     <div class="modal-footer">
       <button class="btn-outline" onclick="closeAllModals()">Cancelar</button>
       <button class="btn-danger" id="confirm-btn" onclick="">
-        <i data-feather="trash-2"></i> Eliminar
+        <i data-feather="trash-2" id="confirm-btn-icon"></i> <span id="confirm-btn-text">Eliminar</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── MODAL: CAMBIAR CONTRASEÑA ── -->
+  <div class="modal modal-sm" id="modal-cambiar-password">
+    <div class="modal-header">
+      <h2>Cambiar Contraseña</h2>
+      <button class="modal-close" id="cambiar-pass-cerrar" onclick="closeAllModals()"><i data-feather="x"></i></button>
+    </div>
+    <form onsubmit="handleCambiarPassword(event)">
+      <div class="modal-body">
+        <p id="cambiar-pass-obligatorio-aviso" class="login-error hidden" role="alert" style="position:static;margin-bottom:1rem;">
+          <i data-feather="alert-triangle"></i>
+          <span>Tu contraseña es temporal. Debes establecer una nueva antes de continuar.</span>
+        </p>
+        <div class="form-group">
+          <label for="cambiar-pass-actual">Contraseña actual</label>
+          <input type="password" id="cambiar-pass-actual" required autocomplete="current-password" />
+        </div>
+        <div class="form-group">
+          <label for="cambiar-pass-nueva">Nueva contraseña</label>
+          <input type="password" id="cambiar-pass-nueva" required minlength="8" autocomplete="new-password" />
+        </div>
+        <div class="form-group">
+          <label for="cambiar-pass-confirmar">Confirmar nueva contraseña</label>
+          <input type="password" id="cambiar-pass-confirmar" required minlength="8" autocomplete="new-password" />
+        </div>
+        <p id="cambiar-pass-error" class="login-error hidden" role="alert" style="position:static;">
+          <i data-feather="alert-circle"></i>
+          <span></span>
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn-primary" id="cambiar-pass-btn">
+          <i data-feather="save"></i> Guardar Nueva Contraseña
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ── MODAL: NUEVO USUARIO (administración) ── -->
+  <div class="modal modal-sm" id="modal-usuario">
+    <div class="modal-header">
+      <h2>Nuevo Usuario</h2>
+      <button class="modal-close" onclick="closeAllModals()"><i data-feather="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="usuario-nuevo-login">Usuario (para iniciar sesión)</label>
+        <input type="text" id="usuario-nuevo-login" required autocomplete="off" maxlength="60" />
+      </div>
+      <div class="form-group">
+        <label for="usuario-nuevo-nombre">Nombre completo</label>
+        <input type="text" id="usuario-nuevo-nombre" required maxlength="120" />
+      </div>
+      <div class="form-group">
+        <label for="usuario-nuevo-rol">Rol</label>
+        <select id="usuario-nuevo-rol">
+          <option value="empleado">Empleado</option>
+          <option value="admin">Administrador</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="usuario-nuevo-password">Contraseña temporal</label>
+        <input type="text" id="usuario-nuevo-password" required minlength="8" autocomplete="off" />
+        <p style="font-size:.78rem;color:var(--gris-label);margin-top:.3rem;">
+          Se le pedirá cambiarla en su primer inicio de sesión. Compártela por un canal seguro, no por correo sin cifrar.
+        </p>
+      </div>
+      <p id="usuario-nuevo-error" class="login-error hidden" role="alert" style="position:static;">
+        <i data-feather="alert-circle"></i>
+        <span></span>
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeAllModals()">Cancelar</button>
+      <button class="btn-primary" id="usuario-nuevo-btn" onclick="guardarUsuarioNuevo()">
+        <i data-feather="save"></i> Crear Usuario
+      </button>
+    </div>
+  </div>
+
+  <!-- ── MODAL: RESTABLECER CONTRASEÑA (administración) ── -->
+  <div class="modal modal-sm" id="modal-reset-password">
+    <div class="modal-header">
+      <h2>Restablecer Contraseña</h2>
+      <button class="modal-close" onclick="closeAllModals()"><i data-feather="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.85rem;color:var(--gris-label);margin-bottom:.8rem;">
+        Usuario: <strong id="reset-pass-usuario" class="mono"></strong>
+      </p>
+      <div class="form-group">
+        <label for="reset-pass-nueva">Nueva contraseña temporal</label>
+        <input type="text" id="reset-pass-nueva" required minlength="8" autocomplete="off" />
+        <p style="font-size:.78rem;color:var(--gris-label);margin-top:.3rem;">
+          El usuario deberá cambiarla en su siguiente inicio de sesión. Todas sus sesiones activas se cerrarán.
+        </p>
+      </div>
+      <p id="reset-pass-error" class="login-error hidden" role="alert" style="position:static;">
+        <i data-feather="alert-circle"></i>
+        <span></span>
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeAllModals()">Cancelar</button>
+      <button class="btn-primary" onclick="confirmarResetPassword()">
+        <i data-feather="key"></i> Restablecer
       </button>
     </div>
   </div>
@@ -1640,7 +1808,7 @@
   <!-- ============================================================
        🔔 TOAST NOTIFICATIONS
   ============================================================ -->
-  <div id="toast-container" class="toast-container"></div>
+  <div id="toast-container" class="toast-container" role="status" aria-live="polite"></div>
 
   <!-- ============================================================
        ⏳ LOADING OVERLAY
