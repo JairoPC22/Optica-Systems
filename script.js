@@ -831,6 +831,17 @@ function _renderAvatar_(cfg) {
   }).toString();
 }
 
+/** Reinicia una animación CSS de un solo disparo en `el` quitando y volviendo
+ *  a poner la clase (con un reflow forzado en medio, si no el navegador la
+ *  trata como si nunca se hubiera quitado y no la vuelve a reproducir). */
+function _popAnim_(el) {
+  if (!el) return;
+  el.classList.remove('avatar-pop');
+  void el.offsetWidth;
+  el.classList.add('avatar-pop');
+  setTimeout(() => el.classList.remove('avatar-pop'), 600);
+}
+
 function _perfilLocalKey_() {
   return 'opticasystems_perfil_' + (STATE.usuario?.id || '');
 }
@@ -864,30 +875,37 @@ async function abrirMiPerfil() {
   } catch {
     showToast('No se pudo cargar el personalizador de avatar (revisa tu conexión)', 'warning');
   }
-  renderAvatarEditor_();
+  renderAvatarEditor_(true);
 }
 
 /** Redibuja el personalizador completo (vista previa + cada fila de opciones)
  *  con la configuración actual en STATE._avatarEnEdicion. */
-function renderAvatarEditor_() {
+function renderAvatarEditor_(animarEntrada) {
   const cfg = STATE._avatarEnEdicion;
-  document.getElementById('avatar-preview').innerHTML = _renderAvatar_(cfg) || '';
+  document.getElementById('avatar-preview').style.setProperty('--avatar-glow', cfg.fondo);
+  document.getElementById('avatar-preview-fx').innerHTML = _renderAvatar_(cfg) || '';
+  _popAnim_(document.getElementById('avatar-preview-fx'));
 
-  const swatchColor = (attr, val) => `
-    <div class="avatar-swatch-color${cfg[attr] === val ? ' activo' : ''}" style="background:${val}"
+  // La entrada escalonada (fade+scale por fila) solo se anima al abrir el
+  // modal por primera vez — repetirla en cada clic mientras el usuario
+  // prueba colores se sentiría repetitivo en vez de agradable.
+  const claseEntrada = animarEntrada ? ' entrar' : '';
+  const retraso = i => animarEntrada ? `animation-delay:${i * 35}ms;` : '';
+  const swatchColor = (attr, val, i) => `
+    <div class="avatar-swatch-color${cfg[attr] === val ? ' activo' : ''}${claseEntrada}" style="${retraso(i)}background:${val};color:${val}"
          onclick="cambiarAtributoAvatar_('${attr}','${val}')" title="${val}"></div>`;
-  const swatchMini = (attr, val) => `
-    <div class="avatar-swatch-mini${cfg[attr] === val ? ' activo' : ''}"
+  const swatchMini = (attr, val, i) => `
+    <div class="avatar-swatch-mini${cfg[attr] === val ? ' activo' : ''}${claseEntrada}" style="${retraso(i)}"
          onclick="cambiarAtributoAvatar_('${attr}','${val}')">${_renderAvatar_({ ...cfg, [attr]: val }) || ''}</div>`;
 
-  document.getElementById('avatar-swatches-fondo').innerHTML   = AVATAR_OPCIONES.fondo.map(v => swatchColor('fondo', v)).join('');
-  document.getElementById('avatar-swatches-piel').innerHTML    = AVATAR_OPCIONES.piel.map(v => swatchColor('piel', v)).join('');
-  document.getElementById('avatar-swatches-pelo').innerHTML    = AVATAR_OPCIONES.pelo.map(v => swatchColor('pelo', v)).join('');
-  document.getElementById('avatar-swatches-ropa').innerHTML    = AVATAR_OPCIONES.ropa.map(v => swatchColor('ropa', v)).join('');
-  document.getElementById('avatar-swatches-peinado').innerHTML = AVATAR_OPCIONES.peinado.map(v => swatchMini('peinado', v)).join('');
-  document.getElementById('avatar-swatches-gafas').innerHTML   = AVATAR_OPCIONES.gafas.map(v => swatchMini('gafas', v)).join('');
+  document.getElementById('avatar-swatches-fondo').innerHTML   = AVATAR_OPCIONES.fondo.map((v, i) => swatchColor('fondo', v, i)).join('');
+  document.getElementById('avatar-swatches-piel').innerHTML    = AVATAR_OPCIONES.piel.map((v, i) => swatchColor('piel', v, i)).join('');
+  document.getElementById('avatar-swatches-pelo').innerHTML    = AVATAR_OPCIONES.pelo.map((v, i) => swatchColor('pelo', v, i)).join('');
+  document.getElementById('avatar-swatches-ropa').innerHTML    = AVATAR_OPCIONES.ropa.map((v, i) => swatchColor('ropa', v, i)).join('');
+  document.getElementById('avatar-swatches-peinado').innerHTML = AVATAR_OPCIONES.peinado.map((v, i) => swatchMini('peinado', v, i)).join('');
+  document.getElementById('avatar-swatches-gafas').innerHTML   = AVATAR_OPCIONES.gafas.map((v, i) => swatchMini('gafas', v, i)).join('');
   document.getElementById('avatar-swatches-preset').innerHTML  = AVATAR_PRESETS.map((p, i) => `
-    <div class="avatar-swatch-mini" onclick="aplicarPresetAvatar_(${i})" title="Combinación ${i + 1}">${_renderAvatar_(p) || ''}</div>
+    <div class="avatar-swatch-mini${claseEntrada}" style="${retraso(i)}" onclick="aplicarPresetAvatar_(${i})" title="Combinación ${i + 1}">${_renderAvatar_(p) || ''}</div>
   `).join('');
 }
 
@@ -942,8 +960,18 @@ function renderUsuarioUI() {
   // Sin avatar elegido todavía: se muestran las iniciales sobre el degradado
   // por defecto (comportamiento original); al elegir uno, se reemplaza por
   // el personaje ilustrado.
-  if (sidebarAvatarEl) { sidebarAvatarEl.style.background = ''; sidebarAvatarEl.innerHTML = avatarSVG || initials; sidebarAvatarEl.classList.toggle('con-avatar', !!avatarSVG); }
-  if (topbarAvatarEl)  { topbarAvatarEl.style.background  = ''; topbarAvatarEl.innerHTML  = avatarSVG || initials; topbarAvatarEl.classList.toggle('con-avatar', !!avatarSVG); }
+  if (sidebarAvatarEl && sidebarAvatarEl.innerHTML !== (avatarSVG || initials)) {
+    sidebarAvatarEl.style.background = '';
+    sidebarAvatarEl.innerHTML = avatarSVG || initials;
+    sidebarAvatarEl.classList.toggle('con-avatar', !!avatarSVG);
+    _popAnim_(sidebarAvatarEl);
+  }
+  if (topbarAvatarEl && topbarAvatarEl.innerHTML !== (avatarSVG || initials)) {
+    topbarAvatarEl.style.background = '';
+    topbarAvatarEl.innerHTML = avatarSVG || initials;
+    topbarAvatarEl.classList.toggle('con-avatar', !!avatarSVG);
+    _popAnim_(topbarAvatarEl);
+  }
   setText('dash-hero-saludo', `${saludoPorHora_()}, ${nombreMostrado.split(' ')[0]}`);
 
   const esAdmin = ['admin', 'administrador'].includes((u.rol || '').toLowerCase());
