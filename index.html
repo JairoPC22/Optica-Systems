@@ -8,7 +8,11 @@
        onclick= y style= inline de forma extensa (reescribirlos a
        addEventListener/clases es un cambio de gran alcance que excede esta
        revisión); sí se retira 'unsafe-eval' y el comodín '*', que no eran
-       necesarios y ampliaban innecesariamente la superficie de ataque. -->
+       necesarios y ampliaban innecesariamente la superficie de ataque.
+       "frame-ancestors" NO va aquí: la spec de CSP la ignora por completo
+       cuando se entrega vía <meta> (solo funciona como cabecera HTTP real),
+       así que dejarla solo generaba una advertencia en consola en cada
+       carga sin aportar ninguna protección real. -->
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self';
                  script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
@@ -17,8 +21,7 @@
                  img-src 'self' data:;
                  connect-src 'self' https://script.google.com https://script.googleusercontent.com https://api.emailjs.com https://cdn.jsdelivr.net;
                  object-src 'none';
-                 base-uri 'self';
-                 frame-ancestors 'self';">
+                 base-uri 'self';">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>Óptica-Systems — Sistema Interno</title>
   <link rel="manifest" href="manifest.json">

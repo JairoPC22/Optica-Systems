@@ -232,10 +232,7 @@ async function sincronizarCola() {
 
   if (ok > 0) {
     showToast(`${ok} cambio${ok > 1 ? 's' : ''} guardado${ok > 1 ? 's' : ''} en Google Sheets`, 'success', 5000);
-    await Promise.allSettled([
-      cargarClientes(), cargarVentas(), cargarPagos(),
-      cargarHistorial(), cargarAuditoria(), cargarInventario(),
-    ]);
+    await cargarTodasLasHojas_();
     renderDashboard();
     filterClientes(); filterVentas(); filterPagos();
     filterHistorial(); filterGarantias(); filterAdeudosBusqueda();
@@ -664,6 +661,26 @@ function togglePassword(inputId = 'login-pass', iconId = 'pass-eye') {
    🏠  INICIO DE APLICACIÓN
 ══════════════════════════════════════════════════════════════ */
 
+let _cargaTodasHojasEnCurso = null;
+/** Dispara la carga de las 6 hojas en paralelo, pero solo una vez a la vez:
+ *  si ya hay una carga en curso (p. ej. iniciarApp() y un clic en
+ *  "Actualizar" se superponen, o el usuario da doble clic mientras espera),
+ *  las llamadas siguientes reusan la misma promesa en vez de disparar otra
+ *  tanda de 6 peticiones simultáneas — Apps Script empezaba a devolver 404
+ *  esporádicos y todo se volvía mucho más lento cuando esto se acumulaba. */
+function cargarTodasLasHojas_() {
+  if (_cargaTodasHojasEnCurso) return _cargaTodasHojasEnCurso;
+  _cargaTodasHojasEnCurso = Promise.allSettled([
+    cargarClientes(),
+    cargarVentas(),
+    cargarPagos(),
+    cargarHistorial(),
+    cargarAuditoria(),
+    cargarInventario(),
+  ]).finally(() => { _cargaTodasHojasEnCurso = null; });
+  return _cargaTodasHojasEnCurso;
+}
+
 async function iniciarApp() {
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
@@ -686,14 +703,7 @@ async function iniciarApp() {
 
   showLoading('Cargando datos del sistema...');
   try {
-    const resultados = await Promise.allSettled([
-    cargarClientes(),
-    cargarVentas(),
-    cargarPagos(),
-    cargarHistorial(),
-    cargarAuditoria(),
-    cargarInventario(),
-    ]);
+    const resultados = await cargarTodasLasHojas_();
     const modulos = ['Clientes','Ventas','Pagos','Historial','Auditoría','Inventario'];
     const fallidos = resultados
     .map((r, i) => r.status === 'rejected' ? modulos[i] : null)
@@ -3532,16 +3542,11 @@ function actualizarLabelReporte() {
   span.textContent = '· ' + label;
 }
 async function refreshDashboard() {
+  const btn = document.querySelector('[onclick="refreshDashboard()"]');
+  if (btn) btn.disabled = true;
   showLoading('Actualizando dashboard...');
   try {
-    const resultados = await Promise.allSettled([
-      cargarClientes(),
-      cargarVentas(),
-      cargarPagos(),
-      cargarHistorial(),
-      cargarAuditoria(),
-      cargarInventario(),
-    ]);
+    const resultados = await cargarTodasLasHojas_();
     const modulos = ['Clientes','Ventas','Pagos','Historial','Auditoría','Inventario'];
     const fallidos = resultados
       .map((r, i) => r.status === 'rejected' ? modulos[i] : null)
@@ -3563,7 +3568,7 @@ async function refreshDashboard() {
     filterInventario();
     showToast('Dashboard actualizado', 'success');
   } catch { showToast('Error al actualizar', 'error'); }
-  finally  { hideLoading(); feather.replace(); }
+  finally  { if (btn) btn.disabled = false; hideLoading(); feather.replace(); }
 }
 
 /* ══════════════════════════════════════════════════════════════
