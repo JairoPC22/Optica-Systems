@@ -179,26 +179,27 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Degradado claro y suave — crema, marfil y un toque de gris cálido,
-     sin tonos oscuros dramáticos. */
+  /* Degradado editorial crema/marfil, con una viñeta suave en los bordes
+     en vez de figuras circulares de color — luz difusa, no "blobs". */
   background:
-    radial-gradient(ellipse 800px 600px at 88% 8%, rgba(216,207,188,.4) 0%, transparent 60%),
-    linear-gradient(135deg, #FBF7EE 0%, #F7F1E4 45%, #EAD9C4 100%);
+    radial-gradient(ellipse 1500px 1100px at 50% 45%, transparent 45%, rgba(36,28,20,.05) 100%),
+    radial-gradient(ellipse 900px 700px at 85% 6%, rgba(216,207,188,.5) 0%, transparent 60%),
+    radial-gradient(ellipse 700px 600px at 6% 100%, rgba(180,166,140,.3) 0%, transparent 55%),
+    linear-gradient(160deg, #FCF9F1 0%, #F6EFDF 42%, #EAD9C0 78%, #DCC9A8 100%);
   position: relative;
   overflow: hidden;
 }
 
-/* Formas decorativas de fondo */
-.login-bg-shapes { position: absolute; inset: 0; pointer-events: none; }
-.shape {
+/* Grano sutil — textura de papel fino, no un degradado plano. */
+.login-screen::before {
+  content: '';
   position: absolute;
-  border-radius: 50%;
-  opacity: .16;
-  background: var(--turquesa);
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: .05;
+  mix-blend-mode: overlay;
+  pointer-events: none;
 }
-.shape-1 { width: 420px; height: 420px; top: -120px; left: -100px; }
-.shape-2 { width: 280px; height: 280px; bottom: -80px; right: -60px; background: var(--acento-luz); opacity: .28; }
-.shape-3 { width: 160px; height: 160px; top: 40%; right: 15%; opacity: .12; }
 
 .login-card {
   background: var(--blanco);
