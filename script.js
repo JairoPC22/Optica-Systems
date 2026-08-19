@@ -1021,11 +1021,21 @@ function renderUsuariosTabla(lista) {
     tbody.innerHTML = '<tr><td colspan="5" class="empty-row">Sin usuarios registrados</td></tr>';
     return;
   }
+  const normUsr = s => String(s || '').trim().toLowerCase();
+  const propioUsuario = normUsr(STATE.usuario?.usuario);
   tbody.innerHTML = lista.map(u => `
     <tr>
       <td data-label="Usuario" class="mono">${esc(u.usuario)}</td>
       <td data-label="Nombre"><strong>${esc(u.nombre)}</strong></td>
-      <td data-label="Rol">${esc(u.rol)}</td>
+      <td data-label="Rol">
+        ${normUsr(u.usuario) === propioUsuario
+          ? esc(u.rol)
+          : `<select class="select-sm" style="min-width:120px;font-size:.78rem;" data-valor-previo="${esc(u.rol)}" onchange="cambiarRolUsuario('${esc(u.usuario)}', this.value, this)">
+              <option value="empleado" ${u.rol === 'empleado' ? 'selected' : ''}>Empleado</option>
+              <option value="admin" ${u.rol === 'admin' ? 'selected' : ''}>Admin</option>
+            </select>`
+        }
+      </td>
       <td data-label="Estado">
         <span class="badge ${u.activo ? 'badge-green' : 'badge-red'}">${u.activo ? 'Activo' : 'Inactivo'}</span>
         ${u.debeCambiarPassword ? '<span class="badge badge-yellow" title="Debe cambiar su contraseña">Temporal</span>' : ''}
@@ -1174,6 +1184,27 @@ function confirmarCambiarActivoUsuario(usuarioLogin, nuevoActivo) {
   };
   openModal('modal-confirmar');
   feather.replace();
+}
+
+/** Cambia el rol de OTRO usuario (el backend rechaza que un admin se cambie el suyo). */
+async function cambiarRolUsuario(usuarioLogin, nuevoRol, selectEl) {
+  const anterior = selectEl.dataset.valorPrevio || (nuevoRol === 'admin' ? 'empleado' : 'admin');
+  selectEl.disabled = true;
+  try {
+    const json = await apiAccion('admin_cambiar_rol', { usuario: usuarioLogin, rol: nuevoRol });
+    if (!json.ok) {
+      showToast(json.error || 'No se pudo cambiar el rol', 'error');
+      selectEl.value = anterior;
+      return;
+    }
+    selectEl.dataset.valorPrevio = nuevoRol;
+    showToast(`Rol de "${usuarioLogin}" actualizado a "${nuevoRol}"`, 'success');
+  } catch {
+    showToast('Error de conexión', 'error');
+    selectEl.value = anterior;
+  } finally {
+    selectEl.disabled = false;
+  }
 }
 
 async function cargarAuditoria() {

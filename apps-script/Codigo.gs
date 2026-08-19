@@ -894,6 +894,29 @@ function manejarAdminSetActivo_(admin, payload) {
   return { ok: true };
 }
 
+/** Cambia el rol de OTRO usuario. Un admin nunca puede cambiar su propio rol (evita que se autodegrade y se quede sin acceso). */
+function manejarAdminCambiarRol_(admin, payload) {
+  if (!esAdmin_(admin)) return { ok: false, error: 'No tienes permisos para esta acción.' };
+  var usuarioObjetivo = normalizarUsuario_(payload && payload.usuario);
+  var rol = String(payload && payload.rol || '').trim().toLowerCase();
+
+  if (['admin', 'administrador', 'empleado'].indexOf(rol) === -1) {
+    return { ok: false, error: 'Rol inválido. Usa "empleado" o "admin".' };
+  }
+  if (usuarioObjetivo === normalizarUsuario_(admin.usuario)) {
+    return { ok: false, error: 'No puedes cambiar tu propio rol.' };
+  }
+
+  var usuarios = leerFilas_(CONFIG.HOJAS.USUARIOS);
+  var fila = usuarios.filas.filter(function (u) { return normalizarUsuario_(u.usuario) === usuarioObjetivo; })[0];
+  if (!fila) return { ok: false, error: 'El usuario no existe.' };
+
+  var colRol = usuarios.encabezados.indexOf('rol') + 1;
+  usuarios.hoja.getRange(fila._fila, colRol).setValue(rol);
+  registrarEvento_(admin.nombre, 'Cambiar rol', 'Cambió el rol de "' + fila.usuario + '" a "' + rol + '".');
+  return { ok: true };
+}
+
 function manejarAdminRevocarSesiones_(admin, payload) {
   if (!esAdmin_(admin)) return { ok: false, error: 'No tienes permisos para esta acción.' };
   var usuarioObjetivo = normalizarUsuario_(payload && payload.usuario);
@@ -1075,6 +1098,8 @@ function doPost(e) {
         return responderJson_(manejarAdminCrearUsuario_(usuario, body.payload));
       case 'admin_set_activo':
         return responderJson_(manejarAdminSetActivo_(usuario, body.payload));
+      case 'admin_cambiar_rol':
+        return responderJson_(manejarAdminCambiarRol_(usuario, body.payload));
       case 'admin_revocar_sesiones':
         return responderJson_(manejarAdminRevocarSesiones_(usuario, body.payload));
       case 'admin_listar_usuarios':
