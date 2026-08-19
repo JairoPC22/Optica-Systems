@@ -155,16 +155,6 @@ a:focus-visible,
   outline-offset: 2px;
   border-radius: var(--radius);
 }
-
-/* Respeta la preferencia del sistema de reducir animaciones. */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: .001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: .001ms !important;
-    scroll-behavior: auto !important;
-  }
-}
 select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237D6F58' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right .8rem center; padding-right: 2rem; }
 
 .hidden { display: none !important; }
@@ -269,7 +259,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 
 @keyframes avatarBreathe {
   0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.03); }
+  50%      { transform: scale(1.045); }
 }
 @keyframes avatarPop {
   0%   { transform: scale(.8) rotate(-5deg); opacity: .5; }
@@ -280,6 +270,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   0%, 100% { opacity: .3;  transform: scale(1); }
   50%      { opacity: .52; transform: scale(1.1); }
 }
+@keyframes avatarRingSpin { to { transform: rotate(360deg); } }
 @keyframes swatchIn {
   from { opacity: 0; transform: scale(.5) translateY(6px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
@@ -304,6 +295,23 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   border-radius: 50%;
   background: radial-gradient(circle, var(--avatar-glow, var(--acento)) 0%, transparent 72%);
   animation: avatarGlowPulse 5s ease-in-out infinite;
+}
+/* Anillo fino en degradado cónico que gira despacio detrás del avatar —
+   el "halo vivo" que pidió el usuario, con la técnica de máscara doble para
+   dejar solo el aro visible (no el círculo relleno). */
+.avatar-preview::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  z-index: -1;
+  border-radius: 50%;
+  padding: 2.5px;
+  background: conic-gradient(from 0deg, var(--avatar-glow, var(--acento)), transparent 25%, var(--avatar-glow, var(--acento)) 55%, transparent 85%, var(--avatar-glow, var(--acento)));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: .65;
+  animation: avatarRingSpin 7s linear infinite;
 }
 .avatar-preview-fx {
   width: 100%; height: 100%;
@@ -358,8 +366,8 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   transition: border-color var(--transition), transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s;
 }
 .avatar-swatch-mini svg { display: block; width: 100%; height: 100%; }
-.avatar-swatch-mini:hover { transform: translateY(-3px) scale(1.1); box-shadow: var(--shadow-sm); }
-.avatar-swatch-mini.activo { border-color: var(--azul-oscuro); box-shadow: 0 0 0 3px var(--acento-luz); }
+.avatar-swatch-mini:hover { transform: translateY(-3px) scale(1.12) rotate(-5deg); box-shadow: var(--shadow-sm); }
+.avatar-swatch-mini.activo { border-color: var(--azul-oscuro); box-shadow: 0 0 0 3px var(--acento-luz); animation: navActiveIn .35s cubic-bezier(.34,1.56,.64,1); }
 
 .input-icon-wrap {
   position: relative;
@@ -400,6 +408,13 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   padding: .65rem 1rem;
   font-size: .84rem;
   margin-bottom: 1rem;
+  animation: errorShake .4s cubic-bezier(.36,.07,.19,.97);
+}
+@keyframes errorShake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
 }
 .login-error svg { width: 16px; height: 16px; flex-shrink: 0; }
 
@@ -424,7 +439,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   margin-top: .5rem;
 }
 .btn-login:hover { opacity: .92; transform: translateY(-1px); box-shadow: 0 12px 30px rgba(138,127,110,.30); }
-.btn-login:active { transform: translateY(0); }
+.btn-login:active { transform: translateY(0) scale(.97); }
 .btn-login .spinner { border-color: rgba(36,28,20,.25); border-top-color: var(--azul-oscuro); }
 
 .login-footer {
@@ -629,11 +644,28 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   color: var(--gris-texto);
   font-size: .87rem;
   font-weight: 500;
-  transition: background var(--transition), color var(--transition);
+  transition: background var(--transition), color var(--transition), transform .22s ease;
   margin-bottom: 2px;
   position: relative;
   white-space: nowrap;
+  animation: navItemIn .4s cubic-bezier(.16,1,.3,1) backwards;
 }
+@keyframes navItemIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+/* nth-of-type (no nth-child) porque los .nav-item son <button> intercalados
+   con <div class="nav-section-label"> — así el índice cuenta solo botones. */
+.sidebar-nav button:nth-of-type(1)  { animation-delay: .02s; }
+.sidebar-nav button:nth-of-type(2)  { animation-delay: .05s; }
+.sidebar-nav button:nth-of-type(3)  { animation-delay: .08s; }
+.sidebar-nav button:nth-of-type(4)  { animation-delay: .11s; }
+.sidebar-nav button:nth-of-type(5)  { animation-delay: .14s; }
+.sidebar-nav button:nth-of-type(6)  { animation-delay: .17s; }
+.sidebar-nav button:nth-of-type(7)  { animation-delay: .2s; }
+.sidebar-nav button:nth-of-type(8)  { animation-delay: .23s; }
+.sidebar-nav button:nth-of-type(9)  { animation-delay: .26s; }
+.sidebar-nav button:nth-of-type(10) { animation-delay: .29s; }
 /* En pantallas de poca altura (laptops pequeñas) el menú lateral con 9
    ítems + 5 encabezados de sección no entraba sin scroll. Se acorta el
    espaciado solo aquí — en pantallas altas y en el cajón móvil (donde el
@@ -642,8 +674,10 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   .nav-section-label { padding: .5rem .5rem .2rem; }
   .nav-item { padding: .5rem .85rem; }
 }
-.nav-item svg { width: 17px; height: 17px; flex-shrink: 0; }
-.nav-item:hover { background: var(--gris-claro); color: var(--azul-oscuro); }
+.nav-item svg { width: 17px; height: 17px; flex-shrink: 0; transition: transform .25s cubic-bezier(.34,1.56,.64,1); }
+.nav-item:hover { background: var(--gris-claro); color: var(--azul-oscuro); transform: translateX(3px); }
+.nav-item:hover svg { transform: scale(1.14); }
+.nav-item:active { transform: translateX(3px) scale(.97); }
 /* Ítem activo: píldora clara y elevada (sombra suave), no un bloque oscuro
    sólido — el mismo lenguaje "cálido, no fuerte" del resto del sistema. */
 .nav-item.active {
@@ -651,6 +685,12 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   color: var(--azul-oscuro);
   box-shadow: 0 1px 3px rgba(36,28,20,.1);
   font-weight: 700;
+  animation: navItemIn .4s cubic-bezier(.16,1,.3,1) backwards, navActiveIn .35s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes navActiveIn {
+  0%   { transform: scale(.94); }
+  60%  { transform: scale(1.02); }
+  100% { transform: scale(1); }
 }
 .nav-item.active svg { color: var(--acento); }
 .nav-badge {
@@ -791,8 +831,10 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   color: var(--gris-texto);
   transition: background var(--transition), color var(--transition), transform var(--transition);
 }
-.btn-icon:hover { background: var(--gris-claro); color: var(--azul-oscuro); }
-.btn-icon svg { width: 18px; height: 18px; }
+.btn-icon:hover { background: var(--gris-claro); color: var(--azul-oscuro); transform: scale(1.08); }
+.btn-icon:active { transform: scale(.92); }
+.btn-icon svg { width: 18px; height: 18px; transition: transform .4s cubic-bezier(.34,1.56,.64,1); }
+#btn-dark-mode:hover svg { transform: rotate(35deg); }
 
 .breadcrumb {
   font-size: .88rem;
@@ -833,12 +875,12 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   display: none;
   flex: 1;
   padding: 1.8rem 1.8rem 2.4rem;
-  animation: fadeIn .25s ease;
+  animation: fadeIn .4s cubic-bezier(.16,1,.3,1);
 }
 .section.active { display: block; }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
@@ -1000,9 +1042,6 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   max-width: 46ch;
   line-height: 1.5;
 }
-@media (prefers-reduced-motion: reduce) {
-  .dash-hero-dot { animation: none; }
-}
 @media (max-width: 640px) {
   .dash-hero { padding: 1.5rem 1.4rem; }
   .dash-hero-titulo { font-size: 1.5rem; }
@@ -1049,7 +1088,8 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   justify-content: center;
   flex-shrink: 0;
 }
-.kpi-icon svg { width: 22px; height: 22px; }
+.kpi-icon svg { width: 22px; height: 22px; transition: transform .3s cubic-bezier(.34,1.56,.64,1); }
+.kpi-card:hover .kpi-icon svg { transform: scale(1.15) rotate(-6deg); }
 .kpi-blue .kpi-icon  { background: rgba(46,92,138,.1); color: var(--azul-medio); }
 .kpi-teal .kpi-icon  { background: rgba(79,195,199,.12); color: var(--turquesa-dark); }
 .kpi-green .kpi-icon { background: var(--verde-bg); color: var(--verde-texto); }
@@ -1173,7 +1213,24 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   vertical-align: middle;
 }
 .table tbody tr:last-child td { border-bottom: none; }
-.table tbody tr:hover { background: rgba(79,195,199,.04); }
+.table tbody tr {
+  transition: background .18s ease, transform .18s ease;
+  animation: rowIn .32s cubic-bezier(.16,1,.3,1) backwards;
+}
+.table tbody tr:hover { background: rgba(79,195,199,.04); transform: translateX(2px); }
+@keyframes rowIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.table tbody tr:nth-child(1)  { animation-delay: .01s; }
+.table tbody tr:nth-child(2)  { animation-delay: .03s; }
+.table tbody tr:nth-child(3)  { animation-delay: .05s; }
+.table tbody tr:nth-child(4)  { animation-delay: .07s; }
+.table tbody tr:nth-child(5)  { animation-delay: .09s; }
+.table tbody tr:nth-child(6)  { animation-delay: .11s; }
+.table tbody tr:nth-child(7)  { animation-delay: .13s; }
+.table tbody tr:nth-child(8)  { animation-delay: .15s; }
+.table tbody tr:nth-child(n+9) { animation-delay: .17s; }
 
 .empty-row {
   text-align: center;
@@ -1193,6 +1250,11 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   font-size: .74rem;
   font-weight: 600;
   white-space: nowrap;
+  animation: badgeIn .3s cubic-bezier(.34,1.56,.64,1) backwards;
+}
+@keyframes badgeIn {
+  from { opacity: 0; transform: scale(.6); }
+  to   { opacity: 1; transform: scale(1); }
 }
 .badge-green  { background: var(--verde-bg);   color: var(--verde-texto); }
 .badge-red    { background: var(--rojo-bg);    color: var(--rojo-texto); }
@@ -1293,7 +1355,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   position: fixed;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -54%) scale(.96);
+  transform: translate(-50%, -56%) scale(.9);
   background: var(--blanco);
   border-radius: var(--radius-lg);
   width: 90%;
@@ -1305,7 +1367,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   box-shadow: var(--shadow-lg);
   opacity: 0;
   pointer-events: none;
-  transition: opacity .22s ease, transform .22s cubic-bezier(.16,1,.3,1);
+  transition: opacity .25s ease, transform .38s cubic-bezier(.34,1.56,.64,1);
 }
 .modal.active {
   opacity: 1;
@@ -1339,7 +1401,8 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   transition: background var(--transition);
 }
 .modal-close:hover { background: var(--gris-claro); }
-.modal-close svg { width: 16px; height: 16px; }
+.modal-close svg { width: 16px; height: 16px; transition: transform .3s cubic-bezier(.34,1.56,.64,1); }
+.modal-close:hover svg { transform: rotate(90deg); }
 
 .modal-body {
   padding: 1.4rem 1.5rem;
@@ -2055,9 +2118,6 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 @keyframes bar3dCrecer {
   from { transform: scaleY(0); }
   to   { transform: scaleY(1); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .bar3d-cubo { animation: none; }
 }
 .bar3d-etiqueta {
   font-size: .68rem;
