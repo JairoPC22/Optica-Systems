@@ -2,7 +2,7 @@
    ÓPTICA-SYSTEMS — Sistema de Gestión Interno
    styles.css
 
-   Sistema de diseño "cálido premium": crema/marfil + terracota como
+   Sistema de diseño "cálido premium": crema/marfil + gris cálido (taupe) como
    acento estratégico, con el azul/turquesa original de la marca
    conservado como acento secundario (avatares, información,
    badges, una serie de las gráficas). Todo el color pasa por las
@@ -49,7 +49,7 @@ body.dark { color-scheme: dark; }
      marino #1F3A5F) — un solo cambio de valor recolorea automáticamente
      casi todo el texto de la app al tono "negro/café muy oscuro" pedido,
      sin tocar cada regla una por una. El resto de esta paleta es nueva:
-     superficies cálidas (crema/marfil) y terracota como acento estratégico. */
+     superficies cálidas (crema/marfil) y gris cálido (taupe) como acento estratégico. */
   --blanco:        #FFFDF8;
   --crema:         #F7F1E4;
   --crema-profunda:#EFE2C4;
@@ -74,7 +74,7 @@ body.dark { color-scheme: dark; }
   --rojo-texto:     #C62828;
   --amarillo-texto: #8a6d00;
 
-  /* ── ACENTO — terracota/cobre, NO dorado/mostaza (se descartó por
+  /* ── ACENTO — gris cálido (taupe), NO dorado/mostaza ni terracota/naranja (se descartó por
      pedido explícito). Claro pero no chillante: se usa con moderación en
      botones principales, el panel destacado y algún indicador — nunca
      como color de fondo general. --acento da ~3:1 sobre blanco (íconos/
@@ -179,7 +179,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Degradado claro y suave — crema, marfil y un toque de terracota pálida,
+  /* Degradado claro y suave — crema, marfil y un toque de gris cálido,
      sin tonos oscuros dramáticos. */
   background:
     radial-gradient(ellipse 800px 600px at 88% 8%, rgba(216,207,188,.4) 0%, transparent 60%),
@@ -842,7 +842,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   animation: dashHeroIn .5s cubic-bezier(.16,1,.3,1);
 }
 @keyframes dashHeroIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-/* El fondo del panel siempre es claro (crema/terracota), aunque el resto de
+/* El fondo del panel siempre es claro (crema/taupe), aunque el resto de
    la página esté en modo oscuro — por eso el texto de aquí usa un color
    fijo (#241C14) en vez de var(--azul-oscuro), que en modo oscuro se
    invierte a un tono casi blanco y quedaría invisible sobre este fondo. */
@@ -2206,7 +2206,7 @@ body.dark {
      sobre fondos claros) pierde contraste sobre los fondos oscuros de la
      interfaz; se restaura el tono original más claro, que sí funciona aquí. */
   --turquesa-dark: #38a8ac;
-  /* El terracota del modo claro es demasiado oscuro/saturado sobre fondos
+  /* El acento del modo claro es demasiado oscuro/saturado sobre fondos
      oscuros — se usa una variante más clara y templada, nunca naranja vivo. */
   --acento:        #B5AA94;
   --acento-fuerte: #9C9179;
