@@ -715,15 +715,54 @@ STATE._periodoKpi = 'mes';
    👤  PERFIL LOCAL (avatar y nombre para mostrar — solo este dispositivo)
 ══════════════════════════════════════════════════════════════ */
 
+/** Siluetas de pelo (van detrás y delante de la cara) por estilo. */
+const _PEINADOS_ = {
+  corto:  { atras: '', frente: '<path d="M24 40 Q24 14 50 14 Q76 14 76 40 L76 30 Q50 20 24 30 Z"/>' },
+  largo:  { atras: '<path d="M20 90 Q16 40 50 36 Q84 40 80 90 L68 90 Q70 50 50 46 Q30 50 32 90 Z"/>', frente: '<path d="M23 38 Q25 13 50 13 Q75 13 77 38 L77 26 Q50 16 23 26 Z"/>' },
+  rizado: { atras: '', frente: '<circle cx="27" cy="27" r="8"/><circle cx="38" cy="18" r="9"/><circle cx="50" cy="15" r="9"/><circle cx="62" cy="18" r="9"/><circle cx="73" cy="27" r="8"/>' },
+  calvo:  { atras: '', frente: '' },
+  chongo: { atras: '', frente: '<path d="M25 38 Q26 15 50 15 Q74 15 75 38 L75 28 Q50 19 25 28 Z"/><circle cx="50" cy="8" r="7"/>' },
+  pico:   { atras: '', frente: '<path d="M24 34 Q30 12 50 12 Q70 12 76 34 Q66 20 50 24 Q34 20 24 34 Z"/>' },
+  raya:   { atras: '', frente: '<path d="M23 38 Q24 13 47 12 Q30 20 27 38 Z M27 38 Q34 14 50 13 Q76 14 77 38 L77 27 Q52 17 27 27 Z"/>' },
+  gorro:  { atras: '', frente: '<path d="M22 32 Q22 10 50 10 Q78 10 78 32 L78 24 Q50 8 22 24 Z"/><rect x="20" y="28" width="60" height="7" rx="3.5"/>' },
+};
+
+/** Formas de gafas (siempre presentes — guiño directo al giro óptico del negocio). */
+const _GAFAS_ = {
+  redonda: '<circle cx="38" cy="46" r="10"/><circle cx="62" cy="46" r="10"/><line x1="48" y1="46" x2="52" y2="46"/><line x1="28" y1="43" x2="21" y2="40"/><line x1="72" y1="43" x2="79" y2="40"/>',
+  cuadrada: '<rect x="28" y="38" width="19" height="15" rx="3"/><rect x="53" y="38" width="19" height="15" rx="3"/><line x1="47" y1="45" x2="53" y2="45"/><line x1="28" y1="42" x2="21" y2="39"/><line x1="72" y1="42" x2="79" y2="39"/>',
+  gatuna:  '<path d="M27 48 Q27 36 38 37 Q48 38 47 48 Q47 54 38 54 Q27 54 27 48 Z"/><path d="M73 48 Q73 36 62 37 Q52 38 53 48 Q53 54 62 54 Q73 54 73 48 Z"/><line x1="47" y1="43" x2="53" y2="43"/><line x1="27" y1="41" x2="20" y2="36"/><line x1="73" y1="41" x2="80" y2="36"/>',
+  pasta:   '<rect x="26" y="37" width="21" height="17" rx="6"/><rect x="53" y="37" width="21" height="17" rx="6"/><line x1="47" y1="45" x2="53" y2="45"/><line x1="26" y1="42" x2="19" y2="39"/><line x1="74" y1="42" x2="81" y2="39"/>',
+};
+
+/** Genera el SVG de un avatar-personaje (siempre con lentes — guiño a "Óptica"). */
+function _avatarCharSVG_(bg, piel, pelo, gafas, peinado) {
+  const p = _PEINADOS_[peinado];
+  return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="50" cy="50" r="50" fill="${bg}"/>
+    <path d="M14 100 Q14 66 50 66 Q86 66 86 100 Z" fill="${_sombrear_(bg)}"/>
+    <g fill="${pelo}">${p.atras}</g>
+    <circle cx="50" cy="44" r="25" fill="${piel}"/>
+    <g fill="${pelo}">${p.frente}</g>
+    <g stroke="${pelo}" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">${_GAFAS_[gafas]}</g>
+  </svg>`;
+}
+/** Variante ~30% más oscura del color recibido, para prendas/lentes con algo de contraste sin agregar más colores a la paleta. */
+function _sombrear_(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const f = c => Math.max(0, Math.round(c * 0.72));
+  return `#${[f(n >> 16 & 255), f(n >> 8 & 255), f(n & 255)].map(c => c.toString(16).padStart(2, '0')).join('')}`;
+}
+
 const AVATAR_PRESETS = [
-  'linear-gradient(135deg, #2E5C8A, #297a7d)',
-  'linear-gradient(135deg, #8A7F6E, #6B6153)',
-  'linear-gradient(135deg, #4CAF50, #2E7D32)',
-  'linear-gradient(135deg, #241C14, #6B6153)',
-  'linear-gradient(135deg, #4FC3C7, #297a7d)',
-  'linear-gradient(135deg, #E57373, #C62828)',
-  'linear-gradient(135deg, #9575CD, #5E35B1)',
-  'linear-gradient(135deg, #B0A48A, #7D6F58)',
+  _avatarCharSVG_('#2E5C8A', '#E7C9A6', '#241C14', 'redonda',  'corto'),
+  _avatarCharSVG_('#4FC3C7', '#D9AF87', '#3D3021', 'cuadrada', 'largo'),
+  _avatarCharSVG_('#4CAF50', '#EFCFAA', '#1C140C', 'gatuna',   'chongo'),
+  _avatarCharSVG_('#8A7F6E', '#D9AF87', '#6B5D3F', 'pasta',    'rizado'),
+  _avatarCharSVG_('#B06B7A', '#E7C9A6', '#241C14', 'redonda',  'calvo'),
+  _avatarCharSVG_('#8B7FA8', '#EFCFAA', '#241C14', 'cuadrada', 'pico'),
+  _avatarCharSVG_('#4A6670', '#D9AF87', '#1C140C', 'gatuna',   'raya'),
+  _avatarCharSVG_('#6B6153', '#E7C9A6', '#241C14', 'pasta',    'gorro'),
 ];
 
 function _perfilLocalKey_() {
@@ -747,8 +786,8 @@ function abrirMiPerfil() {
   const perfil = leerPerfilLocal_();
   const cont = document.getElementById('avatar-picker');
   if (cont) {
-    cont.innerHTML = AVATAR_PRESETS.map((grad, i) => `
-      <div class="avatar-swatch${(perfil.avatarIdx || 0) === i ? ' activo' : ''}" style="background:${grad}" data-idx="${i}" onclick="seleccionarAvatarPerfil_(${i})"></div>
+    cont.innerHTML = AVATAR_PRESETS.map((svg, i) => `
+      <div class="avatar-swatch${(perfil.avatarIdx || 0) === i ? ' activo' : ''}" data-idx="${i}" onclick="seleccionarAvatarPerfil_(${i})">${svg}</div>
     `).join('');
   }
   document.getElementById('perfil-nombre').value = perfil.nombre || STATE.usuario.nombre;
@@ -781,17 +820,19 @@ function renderUsuarioUI() {
   const perfilLocal = leerPerfilLocal_();
   const nombreMostrado = perfilLocal.nombre || u.nombre;
   const initials = nombreMostrado.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
-  const avatarBg = AVATAR_PRESETS[perfilLocal.avatarIdx] || AVATAR_PRESETS[0];
+  const tieneAvatar = Number.isInteger(perfilLocal.avatarIdx) && AVATAR_PRESETS[perfilLocal.avatarIdx];
+  const avatarSVG = tieneAvatar ? AVATAR_PRESETS[perfilLocal.avatarIdx] : null;
 
   setText('sidebar-username', nombreMostrado);
   setText('sidebar-role', u.rol);
-  setHTML('sidebar-avatar', initials);
-  setHTML('topbar-avatar', initials);
   setText('topbar-username', nombreMostrado.split(' ')[0]);
   const sidebarAvatarEl = document.getElementById('sidebar-avatar');
   const topbarAvatarEl  = document.getElementById('topbar-avatar');
-  if (sidebarAvatarEl) sidebarAvatarEl.style.background = avatarBg;
-  if (topbarAvatarEl)  topbarAvatarEl.style.background  = avatarBg;
+  // Sin avatar elegido todavía: se muestran las iniciales sobre el degradado
+  // por defecto (comportamiento original); al elegir uno, se reemplaza por
+  // el personaje ilustrado.
+  if (sidebarAvatarEl) { sidebarAvatarEl.style.background = ''; sidebarAvatarEl.innerHTML = avatarSVG || initials; sidebarAvatarEl.classList.toggle('con-avatar', !!avatarSVG); }
+  if (topbarAvatarEl)  { topbarAvatarEl.style.background  = ''; topbarAvatarEl.innerHTML  = avatarSVG || initials; topbarAvatarEl.classList.toggle('con-avatar', !!avatarSVG); }
   setText('dash-hero-saludo', `${saludoPorHora_()}, ${nombreMostrado.split(' ')[0]}`);
 
   const esAdmin = ['admin', 'administrador'].includes((u.rol || '').toLowerCase());

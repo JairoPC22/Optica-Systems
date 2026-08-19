@@ -271,20 +271,17 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   gap: .6rem;
 }
 .avatar-swatch {
-  width: 42px;
-  height: 42px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   border: 2.5px solid transparent;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--blanco);
-  font-size: .78rem;
-  font-weight: 700;
-  transition: border-color var(--transition), transform var(--transition);
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: border-color var(--transition), transform var(--transition), box-shadow var(--transition);
 }
-.avatar-swatch:hover { transform: translateY(-2px); }
+.avatar-swatch svg { display: block; width: 100%; height: 100%; }
+.avatar-swatch:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
 .avatar-swatch.activo { border-color: var(--azul-oscuro); }
 
 .input-icon-wrap {
@@ -487,7 +484,9 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   font-weight: 700;
   color: var(--blanco);
   flex-shrink: 0;
+  overflow: hidden;
 }
+.user-avatar svg, .topbar-avatar svg { display: block; width: 100%; height: 100%; }
 .user-name { font-size: .85rem; font-weight: 600; color: var(--azul-oscuro); white-space: nowrap; }
 .user-role {
   font-size: .72rem;
@@ -716,6 +715,8 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   font-size: .72rem;
   font-weight: 700;
   color: var(--blanco);
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
 /* ── SECTIONS ── */
