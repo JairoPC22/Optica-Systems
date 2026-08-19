@@ -186,6 +186,10 @@
       </nav>
 
       <div class="sidebar-footer">
+        <button class="btn-logout btn-sidebar-action" onclick="abrirMiPerfil()">
+          <i data-feather="user"></i>
+          <span>Mi perfil</span>
+        </button>
         <button class="btn-logout btn-sidebar-action" onclick="abrirCambioPassword()">
           <i data-feather="key"></i>
           <span>Cambiar contraseña</span>
@@ -1772,6 +1776,34 @@
         <button type="submit" class="btn-primary" id="cambiar-pass-btn">
           <i data-feather="save"></i> Guardar Nueva Contraseña
         </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ── MODAL: MI PERFIL ── -->
+  <div class="modal modal-sm" id="modal-mi-perfil">
+    <div class="modal-header">
+      <h2>Mi Perfil</h2>
+      <button class="modal-close" onclick="closeAllModals()"><i data-feather="x"></i></button>
+    </div>
+    <form onsubmit="guardarMiPerfil(event)">
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Avatar</label>
+          <div class="avatar-picker" id="avatar-picker"></div>
+        </div>
+        <div class="form-group">
+          <label for="perfil-nombre">Nombre para mostrar</label>
+          <input type="text" id="perfil-nombre" maxlength="60" placeholder="Tu nombre" />
+          <small class="form-hint">Solo cambia cómo se ve tu nombre en este dispositivo — no modifica tu cuenta.</small>
+        </div>
+        <div class="form-group">
+          <label>Rol</label>
+          <input type="text" id="perfil-rol" class="input-readonly" readonly />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn-primary"><i data-feather="save"></i> Guardar</button>
       </div>
     </form>
   </div>

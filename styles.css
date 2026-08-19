@@ -2,7 +2,7 @@
    ÓPTICA-SYSTEMS — Sistema de Gestión Interno
    styles.css
 
-   Sistema de diseño "cálido premium": crema/marfil + dorado como
+   Sistema de diseño "cálido premium": crema/marfil + terracota como
    acento estratégico, con el azul/turquesa original de la marca
    conservado como acento secundario (avatares, información,
    badges, una serie de las gráficas). Todo el color pasa por las
@@ -17,6 +17,12 @@
 html.dark-preload body {
   background: #15100a;
 }
+/* Controles nativos (select, scrollbar) en esquema claro por defecto — sin
+   esto el navegador podía pintar el desplegable de un <select> con el tema
+   oscuro del sistema operativo (franja azul de resaltado) aunque la página
+   esté en modo claro. */
+:root { color-scheme: light; }
+body.dark { color-scheme: dark; }
 /* ── VARIABLES ── */
 :root {
   /* Azul/turquesa de marca — se conservan intactos como acento
@@ -43,7 +49,7 @@ html.dark-preload body {
      marino #1F3A5F) — un solo cambio de valor recolorea automáticamente
      casi todo el texto de la app al tono "negro/café muy oscuro" pedido,
      sin tocar cada regla una por una. El resto de esta paleta es nueva:
-     superficies cálidas (crema/marfil) y dorado como acento estratégico. */
+     superficies cálidas (crema/marfil) y terracota como acento estratégico. */
   --blanco:        #FFFDF8;
   --crema:         #F7F1E4;
   --crema-profunda:#EFE2C4;
@@ -68,19 +74,14 @@ html.dark-preload body {
   --rojo-texto:     #C62828;
   --amarillo-texto: #8a6d00;
 
-  /* ── DORADO — acento estratégico ──
-     --amarillo/--amarillo-bg/--amarillo-texto (arriba) ya eran, en la
-     práctica, un dorado; se suman aquí los tonos que faltaban para
-     botones principales, gradientes y bordes destacados. --dorado da
-     ~3:1 sobre blanco (uso en íconos/bordes/texto grande, nunca en
-     texto pequeño — para eso está --amarillo-texto, que sí llega a
-     4.5:1). Usar con moderación: es el acento, no la base. */
-  /* Tonos suavizados (antiguo dorado mostaza demasiado intenso): un dorado
-     más apagado y elegante, cercano al champán/bronce, para una sensación
-     premium en vez de un amarillo saturado. */
-  --dorado:         #B08D3E;
-  --dorado-fuerte:  #8F6F2E;
-  --dorado-luz:     #E3C285;
+  /* ── ACENTO — terracota/cobre, NO dorado/mostaza (se descartó por
+     pedido explícito). Claro pero no chillante: se usa con moderación en
+     botones principales, el panel destacado y algún indicador — nunca
+     como color de fondo general. --acento da ~3:1 sobre blanco (íconos/
+     bordes/texto grande, nunca texto pequeño). */
+  --acento:         #8A7F6E;
+  --acento-fuerte:  #6B6153;
+  --acento-luz:     #D8CFBC;
 
   --sidebar-w:     260px;
   --topbar-h:      64px;
@@ -90,7 +91,7 @@ html.dark-preload body {
   --shadow-sm:     0 1px 3px rgba(36,28,20,.07);
   --shadow:        0 10px 28px rgba(36,28,20,.09);
   --shadow-lg:     0 24px 56px rgba(36,28,20,.16);
-  --shadow-dorado: 0 10px 26px rgba(176,141,62,.22);
+  --shadow-acento: 0 10px 26px rgba(138,127,110,.22);
 
   --font-main:     'Sora', sans-serif;
   --font-serif:    'Playfair Display', serif;
@@ -178,13 +179,11 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Gradiente cálido (marca original en tonos oscuros de esquina, dorado
-     luminoso como acento) en vez del azul sólido de antes — mismo espíritu
-     de "fondo con detalle de luz" que el resto del sistema, sin depender
-     de ninguna imagen. */
+  /* Degradado claro y suave — crema, marfil y un toque de terracota pálida,
+     sin tonos oscuros dramáticos. */
   background:
-    radial-gradient(ellipse 900px 700px at 85% 8%, rgba(227,194,133,.42) 0%, transparent 60%),
-    linear-gradient(135deg, #1a130c 0%, #2e2011 40%, #5a4020 74%, #8f6f2e 100%);
+    radial-gradient(ellipse 800px 600px at 88% 8%, rgba(216,207,188,.4) 0%, transparent 60%),
+    linear-gradient(135deg, #FBF7EE 0%, #F7F1E4 45%, #EAD9C4 100%);
   position: relative;
   overflow: hidden;
 }
@@ -194,20 +193,21 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 .shape {
   position: absolute;
   border-radius: 50%;
-  opacity: .10;
+  opacity: .16;
   background: var(--turquesa);
 }
 .shape-1 { width: 420px; height: 420px; top: -120px; left: -100px; }
-.shape-2 { width: 280px; height: 280px; bottom: -80px; right: -60px; background: var(--dorado-luz); opacity: .16; }
-.shape-3 { width: 160px; height: 160px; top: 40%; right: 15%; opacity: .06; }
+.shape-2 { width: 280px; height: 280px; bottom: -80px; right: -60px; background: var(--acento-luz); opacity: .28; }
+.shape-3 { width: 160px; height: 160px; top: 40%; right: 15%; opacity: .12; }
 
 .login-card {
   background: var(--blanco);
+  border: 1px solid var(--gris-borde);
   border-radius: var(--radius-xl);
   padding: 2.8rem 2.4rem;
   width: 100%;
   max-width: 420px;
-  box-shadow: 0 30px 70px rgba(0,0,0,.35);
+  box-shadow: 0 24px 60px rgba(36,28,20,.14);
   position: relative;
   z-index: 2;
   animation: slideUp .5s cubic-bezier(.16,1,.3,1);
@@ -229,7 +229,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   font-size: .75rem;
   font-weight: 600;
   letter-spacing: .2em;
-  color: var(--dorado);
+  color: var(--acento);
 }
 .logo-marca {
   font-family: var(--font-serif);
@@ -255,6 +255,36 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   margin-bottom: .4rem;
   letter-spacing: .02em;
 }
+.form-hint {
+  display: block;
+  font-size: .74rem;
+  color: var(--gris-label);
+  margin-top: .35rem;
+  line-height: 1.4;
+}
+
+/* ── SELECTOR DE AVATAR (Mi Perfil) ── */
+.avatar-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+}
+.avatar-swatch {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 2.5px solid transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--blanco);
+  font-size: .78rem;
+  font-weight: 700;
+  transition: border-color var(--transition), transform var(--transition);
+}
+.avatar-swatch:hover { transform: translateY(-2px); }
+.avatar-swatch.activo { border-color: var(--azul-oscuro); }
 
 .input-icon-wrap {
   position: relative;
@@ -304,7 +334,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   /* Dorado como acento en la acción principal (pedido explícito): texto
      oscuro encima para mantener buen contraste, en vez del blanco que sí
      funcionaba sobre el azul anterior. */
-  background: linear-gradient(135deg, var(--dorado-luz), var(--dorado));
+  background: linear-gradient(135deg, var(--acento-luz), var(--acento));
   color: var(--azul-oscuro);
   border-radius: var(--radius);
   font-size: .95rem;
@@ -315,10 +345,10 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   justify-content: center;
   gap: .5rem;
   transition: opacity var(--transition), transform var(--transition), box-shadow var(--transition);
-  box-shadow: var(--shadow-dorado);
+  box-shadow: var(--shadow-acento);
   margin-top: .5rem;
 }
-.btn-login:hover { opacity: .92; transform: translateY(-1px); box-shadow: 0 12px 30px rgba(176,141,62,.30); }
+.btn-login:hover { opacity: .92; transform: translateY(-1px); box-shadow: 0 12px 30px rgba(138,127,110,.30); }
 .btn-login:active { transform: translateY(0); }
 .btn-login .spinner { border-color: rgba(36,28,20,.25); border-top-color: var(--azul-oscuro); }
 
@@ -413,7 +443,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   font-size: .65rem;
   font-weight: 600;
   letter-spacing: .22em;
-  color: var(--dorado);
+  color: var(--acento);
   line-height: 1;
 }
 .sidebar-brand-bold {
@@ -514,7 +544,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   box-shadow: 0 1px 3px rgba(36,28,20,.1);
   font-weight: 700;
 }
-.nav-item.active svg { color: var(--dorado); }
+.nav-item.active svg { color: var(--acento); }
 .nav-badge {
   margin-left: auto;
   background: var(--rojo);
@@ -732,16 +762,16 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   align-items: center;
   gap: .45rem;
   padding: .6rem 1.2rem;
-  background: linear-gradient(135deg, var(--dorado-luz), var(--dorado));
+  background: linear-gradient(135deg, var(--acento-luz), var(--acento));
   color: var(--azul-oscuro);
   border-radius: var(--radius);
   font-size: .85rem;
   font-weight: 700;
   transition: opacity var(--transition), transform var(--transition), box-shadow var(--transition);
-  box-shadow: 0 3px 10px rgba(176,141,62,.22);
+  box-shadow: 0 3px 10px rgba(138,127,110,.22);
   white-space: nowrap;
 }
-.btn-primary:hover { opacity: .88; transform: translateY(-1px); box-shadow: 0 5px 16px rgba(176,141,62,.26); }
+.btn-primary:hover { opacity: .88; transform: translateY(-1px); box-shadow: 0 5px 16px rgba(138,127,110,.26); }
 .btn-primary:disabled,
 .btn-outline:disabled,
 .btn-danger:disabled,
@@ -807,17 +837,21 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   margin-bottom: 1.4rem;
   background:
     radial-gradient(ellipse 480px 320px at 100% 0%, rgba(255,255,255,.28) 0%, transparent 65%),
-    linear-gradient(120deg, var(--dorado-luz) 0%, var(--dorado) 100%);
-  box-shadow: var(--shadow-dorado);
+    linear-gradient(120deg, var(--acento-luz) 0%, var(--acento) 100%);
+  box-shadow: var(--shadow-acento);
   animation: dashHeroIn .5s cubic-bezier(.16,1,.3,1);
 }
 @keyframes dashHeroIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+/* El fondo del panel siempre es claro (crema/terracota), aunque el resto de
+   la página esté en modo oscuro — por eso el texto de aquí usa un color
+   fijo (#241C14) en vez de var(--azul-oscuro), que en modo oscuro se
+   invierte a un tono casi blanco y quedaría invisible sobre este fondo. */
 .dash-hero-badge {
   display: inline-flex;
   align-items: center;
   gap: .5rem;
   background: rgba(36,28,20,.14);
-  color: var(--azul-oscuro);
+  color: #241C14;
   font-size: .74rem;
   font-weight: 700;
   letter-spacing: .03em;
@@ -841,7 +875,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   font-family: var(--font-serif);
   font-size: 1.9rem;
   font-weight: 600;
-  color: var(--azul-oscuro);
+  color: #241C14;
   line-height: 1.15;
   max-width: 32ch;
 }
@@ -1099,9 +1133,9 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 }
 .filter-tab:hover { border-color: var(--azul-claro); color: var(--azul-medio); }
 .filter-tab.active {
-  background: var(--dorado-luz);
+  background: var(--acento-luz);
   color: var(--azul-oscuro);
-  border-color: var(--dorado);
+  border-color: var(--acento);
   font-weight: 700;
 }
 
@@ -1806,9 +1840,9 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 }
 .pag-btn:disabled { opacity: .35; cursor: not-allowed; }
 .pag-activa {
-  background: var(--dorado-luz) !important;
+  background: var(--acento-luz) !important;
   color: var(--azul-oscuro) !important;
-  border-color: var(--dorado) !important;
+  border-color: var(--acento) !important;
   font-weight: 700;
 }
 .pag-dots {
@@ -2050,12 +2084,12 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   align-items: center;
   gap: 1rem;
 }
-.revision-icon { flex-shrink: 0; color: var(--dorado); }
+.revision-icon { flex-shrink: 0; color: var(--acento); }
 .revision-icon svg { width: 30px; height: 30px; }
 .revision-title {
   font-size: .95rem;
   font-weight: 700;
-  color: var(--dorado-fuerte);
+  color: var(--acento-fuerte);
 }
 .revision-sub { font-size: .8rem; color: var(--amarillo-texto); margin-top: .2rem; }
 .revision-detalle {
@@ -2080,7 +2114,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 .revision-card-meses {
   font-size: .75rem;
   font-weight: 700;
-  color: var(--dorado);
+  color: var(--acento);
   background: var(--amarillo-bg);
   border-radius: 99px;
   padding: .1rem .6rem;
@@ -2172,6 +2206,16 @@ body.dark {
      sobre fondos claros) pierde contraste sobre los fondos oscuros de la
      interfaz; se restaura el tono original más claro, que sí funciona aquí. */
   --turquesa-dark: #38a8ac;
+  /* El terracota del modo claro es demasiado oscuro/saturado sobre fondos
+     oscuros — se usa una variante más clara y templada, nunca naranja vivo. */
+  --acento:        #B5AA94;
+  --acento-fuerte: #9C9179;
+  --acento-luz:    #DCD3C0;
+  /* El amarillo base (#FBC02D) es demasiado intenso sobre fondos oscuros
+     (toasts, badges de "pendiente"); se atempera para modo oscuro. */
+  --amarillo:       #D9A860;
+  --amarillo-bg:    rgba(217,168,96,.14);
+  --amarillo-texto: #E8C68F;
 }
 
 body.dark .sidebar        { background: #14100A; border-right: 1px solid #2A2015; }
@@ -2216,8 +2260,8 @@ body.dark .kpi-card       { background: #2A2015; border-color: #3D3021; }
 body.dark .kpi-value      { color: #F2E9D6; }
 
 body.dark .filter-tab          { background: #2A2015; border-color: #3D3021; color: #B7A98C; }
-body.dark .filter-tab.active   { background: var(--dorado); color: #1a130c; border-color: var(--dorado); }
-body.dark .pag-activa          { background: var(--dorado) !important; color: #1a130c !important; border-color: var(--dorado) !important; }
+body.dark .filter-tab.active   { background: var(--acento); color: #1a130c; border-color: var(--acento); }
+body.dark .pag-activa          { background: var(--acento) !important; color: #1a130c !important; border-color: var(--acento) !important; }
 body.dark .paginacion          { border-color: #3D3021; }
 body.dark .pag-btn             { background: #2A2015; border-color: #3D3021; color: #F2E9D6; }
 
@@ -2230,10 +2274,10 @@ body.dark .info-grid .info-value { color: #F2E9D6; }
 body.dark .detail-balance-card  { background: #2A2015; border-color: #3D3021; }
 body.dark .balance-item         { background: #2A2015; }
 
-body.dark .revision-alerta { background: #2a2200; border-color: #5a4500; }
-body.dark .revision-title  { color: var(--dorado-luz); }
-body.dark .revision-sub    { color: #9a8020; }
-body.dark .revision-card   { background: #2A2015; border-color: #5a4500; }
+body.dark .revision-alerta { background: #2A2015; border-color: #4A3A26; }
+body.dark .revision-title  { color: var(--acento-luz); }
+body.dark .revision-sub    { color: #C9A876; }
+body.dark .revision-card   { background: #1C140C; border-color: #4A3A26; }
 
 body.dark .loading-box { background: #2A2015; }
 body.dark .loading-spinner { border-color: #3D3021; border-top-color: var(--turquesa); }
