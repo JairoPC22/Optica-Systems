@@ -6,7 +6,7 @@
 
 const CONFIG = {
   // Única fuente de verdad para la URL del backend — no la dupliques en otros archivos.
-   APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyZKDk86o5yK-N_msVk5eNcc-sskrxgE_DAfDwXuk9ijibQerjkTiDyjv6BU9WwUk89ig/exec',
+  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyZKDk86o5yK-N_msVk5eNcc-sskrxgE_DAfDwXuk9ijibQerjkTiDyjv6BU9WwUk89ig/exec',
 
   EMAILJS: {
     PUBLIC_KEY:       '_3DU7Uv315ZzgAFJl',
@@ -735,17 +735,37 @@ const _GAFAS_ = {
   pasta:   '<rect x="26" y="37" width="21" height="17" rx="6"/><rect x="53" y="37" width="21" height="17" rx="6"/><line x1="47" y1="45" x2="53" y2="45"/><line x1="26" y1="42" x2="19" y2="39"/><line x1="74" y1="42" x2="81" y2="39"/>',
 };
 
+let _avatarIdSeq_ = 0;
 /** Genera el SVG de un avatar-personaje (siempre con lentes — guiño a "Óptica"). */
 function _avatarCharSVG_(bg, piel, pelo, gafas, peinado) {
   const p = _PEINADOS_[peinado];
+  const uid = 'av' + (_avatarIdSeq_++);
+  const ojo = _sombrear_(_sombrear_(piel));
   return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="50" cy="50" r="50" fill="${bg}"/>
+    <defs>
+      <radialGradient id="${uid}" cx="50%" cy="35%" r="75%">
+        <stop offset="0%" stop-color="${_aclarar_(bg)}"/>
+        <stop offset="100%" stop-color="${bg}"/>
+      </radialGradient>
+    </defs>
+    <circle cx="50" cy="50" r="50" fill="url(#${uid})"/>
     <path d="M14 100 Q14 66 50 66 Q86 66 86 100 Z" fill="${_sombrear_(bg)}"/>
     <g fill="${pelo}">${p.atras}</g>
     <circle cx="50" cy="44" r="25" fill="${piel}"/>
+    <ellipse cx="33" cy="52" rx="5" ry="3" fill="rgba(224,122,95,.28)"/>
+    <ellipse cx="67" cy="52" rx="5" ry="3" fill="rgba(224,122,95,.28)"/>
+    <circle cx="38" cy="46" r="2.3" fill="${ojo}"/>
+    <circle cx="62" cy="46" r="2.3" fill="${ojo}"/>
+    <path d="M43 58 Q50 62.5 57 58" stroke="${ojo}" stroke-width="2.4" fill="none" stroke-linecap="round"/>
     <g fill="${pelo}">${p.frente}</g>
     <g stroke="${pelo}" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">${_GAFAS_[gafas]}</g>
   </svg>`;
+}
+/** Variante ~35% más clara del color recibido, para el brillo superior del degradado de fondo. */
+function _aclarar_(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const f = c => Math.min(255, Math.round(c + (255 - c) * 0.35));
+  return `#${[f(n >> 16 & 255), f(n >> 8 & 255), f(n & 255)].map(c => c.toString(16).padStart(2, '0')).join('')}`;
 }
 /** Variante ~30% más oscura del color recibido, para prendas/lentes con algo de contraste sin agregar más colores a la paleta. */
 function _sombrear_(hex) {
@@ -762,7 +782,7 @@ const AVATAR_PRESETS = [
   _avatarCharSVG_('#B06B7A', '#E7C9A6', '#241C14', 'redonda',  'calvo'),
   _avatarCharSVG_('#8B7FA8', '#EFCFAA', '#241C14', 'cuadrada', 'pico'),
   _avatarCharSVG_('#4A6670', '#D9AF87', '#1C140C', 'gatuna',   'raya'),
-  _avatarCharSVG_('#6B6153', '#E7C9A6', '#241C14', 'pasta',    'gorro'),
+  _avatarCharSVG_('#5B8C74', '#E7C9A6', '#241C14', 'pasta',    'gorro'),
 ];
 
 function _perfilLocalKey_() {
@@ -3583,6 +3603,35 @@ function configurarModalConfirmar({ titulo, texto, textoBoton, icono, claseBoton
   document.getElementById('confirm-btn-icon').setAttribute('data-feather', icono);
 }
 
+/** Sustituto de confirm() nativo del navegador. Si "modalAnterior" se indica,
+ *  cancelar regresa a ese modal en vez de cerrar todo (para confirmaciones
+ *  disparadas desde dentro de otro modal, como "¿cerrar sin guardar?"). */
+function confirmarAccion({ titulo, texto, textoBoton = 'Confirmar', claseBoton = 'danger', icono = 'alert-triangle', onConfirmar, modalAnterior }) {
+  setText('confirm2-title', titulo);
+  setHTML('confirm2-text', texto);
+  setText('confirm2-btn-text', textoBoton);
+  document.getElementById('confirm2-icon').setAttribute('data-feather', icono);
+  const btn = document.getElementById('confirm2-btn');
+  btn.className = 'btn-' + claseBoton;
+  btn.onclick = () => {
+    document.getElementById('modal-confirmar-generico').classList.remove('active');
+    onConfirmar();
+  };
+  const cancelar = () => cerrarConfirmacionGenerica(modalAnterior);
+  document.getElementById('confirm2-cancelar').onclick = cancelar;
+  document.getElementById('confirm2-cerrar').onclick   = cancelar;
+  openModal('modal-confirmar-generico');
+  feather.replace();
+}
+function cerrarConfirmacionGenerica(modalAnterior) {
+  document.getElementById('modal-confirmar-generico').classList.remove('active');
+  if (modalAnterior) {
+    document.getElementById(modalAnterior)?.classList.add('active');
+  } else {
+    closeAllModals();
+  }
+}
+
 function confirmarEliminar(tipo, id) {
   // Obtener nombre desde STATE para evitar bugs con apóstrofes en onclick
   let nombre = '';
@@ -3977,7 +4026,16 @@ function cerrarModalConConfirmacion() {
   });
 
   if (hayDatosInputs || hayDatosSelects) {
-    if (!confirm('¿Cerrar sin guardar? Los datos ingresados se perderán.')) return;
+    confirmarAccion({
+      titulo: 'Cerrar sin guardar',
+      texto: '¿Cerrar sin guardar? Los datos ingresados se perderán.',
+      textoBoton: 'Cerrar sin guardar',
+      claseBoton: 'danger',
+      icono: 'x-circle',
+      modalAnterior: modalActivo.id,
+      onConfirmar: () => closeAllModals(),
+    });
+    return;
   }
   closeAllModals();
 }
@@ -4312,7 +4370,7 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
     .btn-print{
       display:flex;align-items:center;gap:.5rem;
       max-width:820px;margin:0 auto 16px;padding:10px 24px;
-      background:linear-gradient(135deg,#241C14,#6B6153);
+      background:linear-gradient(135deg,#4A453A,#8A7F6E);
       color:#fff;border:none;border-radius:10px;font-size:13px;
       font-weight:600;cursor:pointer;font-family:'Inter',Arial,sans-serif;
     }
@@ -4323,7 +4381,7 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
 
     /* ── HEADER PRINCIPAL ── */
     .header{
-      background:linear-gradient(135deg,#241C14 0%,#6B6153 60%,#8A7F6E 100%);
+      background:linear-gradient(135deg,#4A453A 0%,#8A7F6E 60%,#B0A48A 100%);
       padding:0;
       position:relative;
       overflow:hidden;
@@ -4400,7 +4458,7 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
     .av-wrap{overflow-x:auto;border-radius:10px;overflow:hidden;border:1.5px solid #E7DCC5;}
     table.av{width:100%;border-collapse:collapse;font-size:11.5px;}
     table.av th{
-      background:linear-gradient(135deg,#241C14,#6B6153);
+      background:linear-gradient(135deg,#4A453A,#8A7F6E);
       color:#fff;font-weight:700;padding:8px 12px;
       text-align:center;font-size:10px;letter-spacing:.08em;
     }
@@ -4421,9 +4479,9 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
 
     /* ── RX BOX ── */
     .rx-box{
-      background:linear-gradient(135deg,#241C14,#2a4e7a);
+      background:linear-gradient(135deg,#4A453A,#8A7F6E);
       border-radius:12px;padding:16px 18px;color:#fff;
-      box-shadow:0 4px 16px rgba(31,58,95,.25);
+      box-shadow:0 4px 16px rgba(36,28,20,.2);
     }
     .rx-titulo{font-size:9px;font-weight:800;letter-spacing:.18em;color:#D8CFBC;margin-bottom:10px;text-transform:uppercase;}
     .rx-box table{width:100%;font-size:12px;}
@@ -4474,7 +4532,7 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
       margin-top:auto;
     }
     .footer-brand{display:flex;align-items:center;gap:10px;}
-    .footer-logo{width:32px;height:32px;border-radius:7px;object-fit:contain;background:rgba(31,58,95,.08);padding:3px;}
+    .footer-logo{width:32px;height:32px;border-radius:7px;object-fit:contain;background:rgba(36,28,20,.06);padding:3px;}
     .footer-info{}
     .footer-nombre{font-size:12px;font-weight:700;color:#241C14;}
     .footer-sub{font-size:10px;color:#7D6F58;margin-top:1px;}
@@ -5560,8 +5618,8 @@ function cargarECharts_() {
   if (window.echarts) return Promise.resolve();
   if (_echartsCargando) return _echartsCargando;
   _echartsCargando = cargarScript_(
-    'https://cdn.jsdelivr.net/npm/echarts@6.1.0/dist/echarts.min.js',
-    'sha384-C2iskrW/uPW46KzOjrvJIQo4YkV8lkD+QS0CrDN18IIPIpT/g2USu8bTP3nvmIAD'
+    'https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js',
+    'sha384-pPi0zxBAoDu6+JXW/C68UZLvBUUtU+7zonhif43rqj7pxsGyqyqzcian2Rj37Rss'
   ).then(() => cargarScript_(
     'https://cdn.jsdelivr.net/npm/echarts-gl@2.1.0/dist/echarts-gl.min.js',
     'sha384-RSPZ3vSNVFJnUBsUVMnD0qizvywfxO1bcpIeS9dg5sseJ+Daf08BIyMCZMX+rmLl'
@@ -5587,6 +5645,14 @@ async function toggleGrafica3D(nombre) {
   boton.disabled = true;
   try {
     await cargarECharts_();
+  } catch (err) {
+    console.error('Error al cargar la librería de gráficas 3D:', err);
+    showToast('No se pudo cargar la librería 3D (revisa tu conexión)', 'error');
+    boton.disabled = false;
+    return;
+  }
+
+  try {
     canvasWrap.classList.add('hidden');
     contenedor3D.classList.remove('hidden');
     boton.classList.add('activo');
@@ -5602,7 +5668,11 @@ async function toggleGrafica3D(nombre) {
     await new Promise(r => setTimeout(r, 50));
     actualizarGrafica3DSiVisible(nombre);
   } catch (err) {
-    showToast('No se pudo cargar la vista 3D (revisa tu conexión)', 'error');
+    console.error('Error al iniciar la vista 3D:', err);
+    showToast('Este dispositivo no pudo iniciar la vista 3D', 'error');
+    contenedor3D.classList.add('hidden');
+    canvasWrap.classList.remove('hidden');
+    boton.classList.remove('activo');
   } finally {
     boton.disabled = false;
   }
@@ -5826,10 +5896,10 @@ function imprimirTicket(ventaId) {
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     body{font-family:'Inter',monospace;background:#f0f2f5;display:flex;flex-direction:column;align-items:center;padding:20px;min-height:100vh;}
-    .btn-print{background:linear-gradient(135deg,#241C14,#6B6153);color:#fff;border:none;padding:10px 28px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:16px;font-family:'Inter',sans-serif;}
+    .btn-print{background:linear-gradient(135deg,#4A453A,#8A7F6E);color:#fff;border:none;padding:10px 28px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:16px;font-family:'Inter',sans-serif;}
     .btn-print:hover{opacity:.9;}
     .ticket{background:#fff;width:320px;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);overflow:hidden;}
-    .t-header{background:linear-gradient(135deg,#241C14,#6B6153);padding:20px 16px 16px;text-align:center;}
+    .t-header{background:linear-gradient(135deg,#4A453A,#8A7F6E);padding:20px 16px 16px;text-align:center;}
     .t-logo{width:48px;height:48px;border-radius:10px;object-fit:contain;background:rgba(255,255,255,.12);padding:3px;margin-bottom:8px;}
     .t-marca{font-size:10px;letter-spacing:.22em;color:#D8CFBC;font-weight:600;}
     .t-nombre{font-size:20px;font-weight:800;color:#fff;letter-spacing:.04em;}
@@ -6233,7 +6303,7 @@ const isPWA = window.navigator.standalone === true ||
     .btn-print{
       display:flex;align-items:center;gap:.5rem;max-width:920px;
       margin:0 auto 16px;padding:10px 28px;
-      background:linear-gradient(135deg,#241C14,#6B6153);color:#fff;
+      background:linear-gradient(135deg,#4A453A,#8A7F6E);color:#fff;
       border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;
       font-family:'Inter',sans-serif;
     }
@@ -6241,7 +6311,7 @@ const isPWA = window.navigator.standalone === true ||
     .pagina{background:#fff;max-width:920px;margin:0 auto;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.18);}
     /* Header */
     .rpt-header{
-      background:linear-gradient(135deg,#241C14 0%,#6B6153 60%,#8A7F6E 100%);
+      background:linear-gradient(135deg,#4A453A 0%,#8A7F6E 60%,#B0A48A 100%);
       padding:24px 32px;display:flex;align-items:center;justify-content:space-between;
       position:relative;overflow:hidden;
     }
@@ -6272,7 +6342,7 @@ const isPWA = window.navigator.standalone === true ||
     .rpt-kpi-label{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#7D6F58;}
     .rpt-kpi.green .rpt-kpi-val{color:#4CAF50;}
     .rpt-kpi.red   .rpt-kpi-val{color:#E53935;}
-    .rpt-kpi.teal  .rpt-kpi-val{color:#4FC3C7;}
+    .rpt-kpi.teal  .rpt-kpi-val{color:#8A7F6E;}
     /* Cuerpo */
     .rpt-body{padding:24px 32px;}
     .rpt-seccion{margin-bottom:26px;}
@@ -6296,7 +6366,7 @@ const isPWA = window.navigator.standalone === true ||
     /* Tabla */
     table.rpt{width:100%;border-collapse:collapse;font-size:11px;}
     table.rpt th{
-      background:linear-gradient(135deg,#241C14,#6B6153);color:#fff;
+      background:linear-gradient(135deg,#4A453A,#8A7F6E);color:#fff;
       padding:8px 10px;text-align:left;font-weight:700;font-size:9.5px;letter-spacing:.06em;
     }
     table.rpt td{padding:7px 10px;border-bottom:1px solid #eef2f7;color:#241C14;vertical-align:middle;}
@@ -6917,8 +6987,20 @@ async function guardarAjusteStock() {
   else nuevoStock = cantidad; // ajuste directo
 
   if (tipo === 'ajuste' && nuevoStock === 0) {
-    if (!confirm(`Estás poniendo el stock de "${p.nombre}" en CERO. ¿Confirmas?`)) return;
+    confirmarAccion({
+      titulo: 'Confirmar ajuste de stock',
+      texto: `Estás poniendo el stock de "${esc(p.nombre)}" en CERO. ¿Confirmas?`,
+      textoBoton: 'Confirmar',
+      claseBoton: 'danger',
+      modalAnterior: 'modal-ajuste-stock',
+      onConfirmar: () => _ejecutarAjusteStock(p, productoId, tipo, nuevoStock, stockAnterior, motivo),
+    });
+    return;
   }
+  await _ejecutarAjusteStock(p, productoId, tipo, nuevoStock, stockAnterior, motivo);
+}
+
+async function _ejecutarAjusteStock(p, productoId, tipo, nuevoStock, stockAnterior, motivo) {
   showLoading('Actualizando stock...');
   try {
     const dataUpdate = { ...p, stock: nuevoStock };

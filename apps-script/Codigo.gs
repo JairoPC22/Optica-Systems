@@ -701,6 +701,7 @@ function manejarLogin_(payload) {
     token: sesion.token,
     expira: sesion.expira,
     usuario: {
+      usuario: fila.usuario,
       nombre: fila.nombre,
       rol: fila.rol,
       debeCambiarPassword: fila.debeCambiarPassword === true || fila.debeCambiarPassword === 'TRUE' || fila.debeCambiarPassword === 'true',

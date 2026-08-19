@@ -365,13 +365,13 @@
             <button class="grafica-tab" onclick="cambiarPeriodo('mes', this)">30 días</button>
             <button class="grafica-tab" onclick="cambiarPeriodo('año', this)">Año</button>
           </div>
-          <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;">
-            <input type="date" id="dash-fecha-desde" class="select-sm" style="min-width:130px;font-size:.78rem;" 
+          <div class="graficas-rango">
+            <input type="date" id="dash-fecha-desde" class="select-sm" style="min-width:0;width:118px;font-size:.78rem;"
               oninput="aplicarRangoPersonalizado()" title="Desde" />
-            <span style="color:var(--gris-label);font-size:.8rem;">—</span>
-            <input type="date" id="dash-fecha-hasta" class="select-sm" style="min-width:130px;font-size:.78rem;" 
+            <span class="graficas-rango-sep">—</span>
+            <input type="date" id="dash-fecha-hasta" class="select-sm" style="min-width:0;width:118px;font-size:.78rem;"
               oninput="aplicarRangoPersonalizado()" title="Hasta" />
-            <button class="btn-sm" onclick="limpiarRangoPersonalizado()" title="Limpiar rango"><i data-feather="x"></i></button>
+            <button class="btn-icon" onclick="limpiarRangoPersonalizado()" title="Limpiar rango"><i data-feather="x"></i></button>
           </div>
         </div>
         </div>
@@ -1717,6 +1717,22 @@
       <button class="btn-danger" id="confirm-btn" onclick="">
         <i data-feather="trash-2" id="confirm-btn-icon"></i> <span id="confirm-btn-text">Eliminar</span>
       </button>
+    </div>
+  </div>
+
+  <!-- ── MODAL: CONFIRMACIÓN GENÉRICA (reemplaza confirm() nativo del navegador) ── -->
+  <div class="modal modal-sm" id="modal-confirmar-generico">
+    <div class="modal-header">
+      <h2 id="confirm2-title">Confirmar</h2>
+      <button class="modal-close" id="confirm2-cerrar"><i data-feather="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="confirm-icon"><i data-feather="alert-triangle" id="confirm2-icon"></i></div>
+      <p class="confirm-text" id="confirm2-text"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" id="confirm2-cancelar">Cancelar</button>
+      <button class="btn-danger" id="confirm2-btn"><span id="confirm2-btn-text">Confirmar</span></button>
     </div>
   </div>
 

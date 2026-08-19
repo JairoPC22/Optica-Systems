@@ -80,7 +80,7 @@ body.dark { color-scheme: dark; }
      como color de fondo general. --acento da ~3:1 sobre blanco (íconos/
      bordes/texto grande, nunca texto pequeño). */
   --acento:         #8A7F6E;
-  --acento-fuerte:  #6B6153;
+  --acento-fuerte:  #7A6F5E;
   --acento-luz:     #D8CFBC;
 
   --sidebar-w:     260px;
@@ -671,7 +671,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   font-style: italic;
 }
 @media (max-width: 900px) {
-  .topbar-search { display: none; }
+  .search-box.topbar-search { display: none; }
 }
 
 .btn-icon {
@@ -681,7 +681,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   width: 36px; height: 36px;
   border-radius: 8px;
   color: var(--gris-texto);
-  transition: background var(--transition), color var(--transition);
+  transition: background var(--transition), color var(--transition), transform var(--transition);
 }
 .btn-icon:hover { background: var(--gris-claro); color: var(--azul-oscuro); }
 .btn-icon svg { width: 18px; height: 18px; }
@@ -774,6 +774,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   white-space: nowrap;
 }
 .btn-primary:hover { opacity: .88; transform: translateY(-1px); box-shadow: 0 5px 16px rgba(138,127,110,.26); }
+.btn-primary:active, .btn-outline:active, .btn-icon:active, .btn-sm:active { transform: scale(.96); }
 .btn-primary:disabled,
 .btn-outline:disabled,
 .btn-danger:disabled,
@@ -796,7 +797,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   border-radius: var(--radius);
   font-size: .85rem;
   font-weight: 600;
-  transition: border-color var(--transition), background var(--transition), color var(--transition);
+  transition: border-color var(--transition), background var(--transition), color var(--transition), transform var(--transition);
 }
 .btn-outline:hover { border-color: var(--azul-medio); color: var(--azul-medio); }
 .btn-outline svg { width: 15px; height: 15px; }
@@ -824,7 +825,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   border: 1.5px solid var(--gris-borde);
   border-radius: 6px;
   background: var(--blanco);
-  transition: background var(--transition), border-color var(--transition);
+  transition: background var(--transition), border-color var(--transition), transform var(--transition);
 }
 .btn-sm:hover { background: var(--gris-claro); border-color: var(--azul-claro); }
 
@@ -1086,7 +1087,6 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 .badge-red    { background: var(--rojo-bg);    color: var(--rojo-texto); }
 .badge-yellow { background: var(--amarillo-bg); color: var(--amarillo-texto); }
 .badge-blue   { background: rgba(46,92,138,.1); color: var(--azul-medio); }
-.badge-gray   { background: var(--gris-claro); color: var(--gris-texto); }
 
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .dot-green  { background: var(--verde); }
@@ -1676,7 +1676,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 }
 
 @media (max-width: 480px) {
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .kpi-grid { grid-template-columns: 1fr; }
   .topbar-date { display: none; }
 }
 
@@ -1688,11 +1688,8 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 
 /* ── UTILITY ── */
 .mt-1 { margin-top: .5rem; }
-.mt-2 { margin-top: 1rem; }
 .mono { font-family: var(--font-mono); }
 .fw-bold { font-weight: 700; }
-.text-center { text-align: center; }
-.w-full { width: 100%; }
 
 .sidebar.collapsed .sidebar-logo img {
   width: 36px !important;
@@ -1879,6 +1876,21 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   border-radius: 8px;
   padding: .25rem;
 }
+
+/* Grupo de rango de fechas — una sola unidad visual que envuelve como
+   bloque, no cada campo por separado (antes se veía roto al envolver). */
+.graficas-rango {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  background: var(--gris-claro);
+  border: 1.5px solid var(--gris-borde);
+  border-radius: 8px;
+  padding: .3rem .5rem;
+  flex-wrap: nowrap;
+}
+.graficas-rango .select-sm { background: var(--blanco); }
+.graficas-rango-sep { color: var(--gris-label); font-size: .8rem; }
 
 .grafica-tab {
   padding: .35rem .9rem;
@@ -2225,6 +2237,9 @@ body.dark .sidebar-user-card { background: rgba(255,255,255,.04); border-color: 
 body.dark .nav-item:hover    { background: rgba(255,255,255,.06); }
 body.dark .nav-item.active   { background: rgba(79,195,199,.14); color: var(--turquesa); }
 body.dark .sidebar-header    { border-color: rgba(255,255,255,.05); }
+/* El ícono del logo es un .ico de tinta oscura — sin fondo claro se pierde
+   contra el sidebar casi negro del modo oscuro. */
+body.dark .sidebar-logo img  { background: rgba(242,233,214,.92); border-radius: 8px; padding: 3px; }
 body.dark .sidebar-footer    { border-color: rgba(255,255,255,.05); }
 
 body.dark .topbar    { background: #2A2015; border-color: #3D3021; }
@@ -2287,6 +2302,8 @@ body.dark .loading-spinner { border-color: #3D3021; border-top-color: var(--turq
 body.dark .grafica-tab        { color: #B7A98C; }
 body.dark .grafica-tab.active { background: #2A2015; color: #F2E9D6; }
 body.dark .graficas-tabs      { background: #1C140C; border-color: #3D3021; }
+body.dark .graficas-rango     { background: #1C140C; border-color: #3D3021; }
+body.dark .graficas-rango .select-sm { background: #2A2015; border-color: #3D3021; color: #F2E9D6; }
 body.dark .metrica-item       { background: #2A2015; }
 body.dark .metrica-valor      { color: #F2E9D6; }
 body.dark .donut-label        { color: #B7A98C; }
@@ -2482,7 +2499,11 @@ html:has(body.dark.sidebar-collapsed) {
   border: 1.5px solid var(--gris-borde);
   border-radius: 8px;
   padding: .25rem;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.kpi-periodo-tabs::-webkit-scrollbar { display: none; }
 
 .kpi-periodo-tab {
   padding: .32rem .85rem;
