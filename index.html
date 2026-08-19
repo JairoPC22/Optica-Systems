@@ -772,9 +772,14 @@
             <h1 class="section-title">Usuarios del Sistema</h1>
             <p class="section-desc">Altas, bajas y contraseñas del personal con acceso</p>
           </div>
-          <button class="btn-primary" onclick="abrirModalUsuario()">
-            <i data-feather="user-plus"></i> Nuevo Usuario
-          </button>
+          <div style="display:flex;gap:.6rem;">
+            <button class="btn-outline" onclick="refrescarUsuarios(this)" title="Actualizar lista">
+              <i data-feather="refresh-cw"></i> Actualizar
+            </button>
+            <button class="btn-primary" onclick="abrirModalUsuario()">
+              <i data-feather="user-plus"></i> Nuevo Usuario
+            </button>
+          </div>
         </div>
 
         <div class="card">

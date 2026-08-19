@@ -511,6 +511,7 @@ function handleLogout() {
   STATE.historial = [];
   STATE.auditoria = [];
   STATE.inventario = [];
+  STATE._usuariosCache = null;
   STATE.clienteActivo = null;
   STATE._filtroAdeudos = 'todos';
   STATE._revisionesPendientes = [];
@@ -1146,11 +1147,29 @@ async function cargarYRenderUsuarios() {
   try {
     const json = await apiAccion('admin_listar_usuarios');
     if (!json.ok) { showToast(json.error || 'No se pudo cargar la lista de usuarios', 'error'); return; }
-    renderUsuariosTabla(json.usuarios || []);
+    STATE._usuariosCache = json.usuarios || [];
+    renderUsuariosTabla(STATE._usuariosCache);
   } catch (err) {
     console.error(err);
     if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="empty-row">Error al cargar usuarios</td></tr>';
   }
+}
+
+/** Al navegar a la sección Usuarios se reutiliza la última lista ya
+ *  cargada en esta sesión en vez de pedirla de nuevo a Apps Script cada
+ *  vez — es la sección de la que más se quejó la lentitud, y su lista
+ *  casi nunca cambia entre una visita y la siguiente. Cualquier acción que
+ *  sí la modifique (crear, resetear contraseña, activar/desactivar) llama
+ *  a cargarYRenderUsuarios() directamente para refrescar el caché. */
+function abrirSeccionUsuarios() {
+  if (STATE._usuariosCache) { renderUsuariosTabla(STATE._usuariosCache); return; }
+  cargarYRenderUsuarios();
+}
+
+async function refrescarUsuarios(btn) {
+  if (btn) { btn.disabled = true; btn.querySelector('svg')?.classList.add('girando'); }
+  await cargarYRenderUsuarios();
+  if (btn) { btn.disabled = false; btn.querySelector('svg')?.classList.remove('girando'); }
 }
 
 function renderUsuariosTabla(lista) {
@@ -3576,8 +3595,11 @@ function actualizarLabelReporte() {
 }
 async function refreshDashboard() {
   const btn = document.querySelector('[onclick="refreshDashboard()"]');
-  if (btn) btn.disabled = true;
-  showLoading('Actualizando dashboard...');
+  // Sin overlay de pantalla completa: el dashboard sigue visible e
+  // interactivo mientras se actualiza en segundo plano — solo el ícono del
+  // botón gira. El overlay bloqueante hacía que cada actualización se
+  // sintiera más lenta de lo que en realidad era.
+  if (btn) { btn.disabled = true; btn.querySelector('svg')?.classList.add('girando'); }
   try {
     const resultados = await cargarTodasLasHojas_();
     const modulos = ['Clientes','Ventas','Pagos','Historial','Auditoría','Inventario'];
@@ -3601,7 +3623,10 @@ async function refreshDashboard() {
     filterInventario();
     showToast('Dashboard actualizado', 'success');
   } catch { showToast('Error al actualizar', 'error'); }
-  finally  { if (btn) btn.disabled = false; hideLoading(); feather.replace(); }
+  finally  {
+    if (btn) { btn.disabled = false; btn.querySelector('svg')?.classList.remove('girando'); }
+    feather.replace();
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -4022,7 +4047,7 @@ function navigateTo(seccion) {
   if (seccion === 'garantias')  filterGarantias();
   if (seccion === 'inventario') filterInventario();
   if (seccion === 'auditoria')  filterAuditoria();
-  if (seccion === 'usuarios')   cargarYRenderUsuarios();
+  if (seccion === 'usuarios')   abrirSeccionUsuarios();
 
   if (window.innerWidth <= 768) {
     document.getElementById('sidebar').classList.remove('mobile-open');
