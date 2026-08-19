@@ -787,6 +787,7 @@ const AVATAR_OPCIONES = {
   fondo: ['#2E5C8A', '#4FC3C7', '#4CAF50', '#8A7F6E', '#B06B7A', '#8B7FA8', '#4A6670', '#5B8C74'],
   piel:  ['#F5DCC0', '#E7C9A6', '#D9AF87', '#C68642', '#8D5B3C'],
   pelo:  ['#241C14', '#6B5D3F', '#B5651D', '#D9D9D9', '#F2D06B'],
+  ropa:  ['#FFFFFF', '#241C14', '#4A6670', '#B06B7A', '#5B8C74', '#8B7FA8', '#D9A860', '#2E5C8A'],
   peinado: ['long', 'bobCut', 'curly', 'bald', 'buzzcut', 'fade', 'beanie', 'bunUndercut'],
   gafas:   ['glasses', 'sunglasses'],
 };
@@ -794,14 +795,14 @@ const AVATAR_OPCIONES = {
 /** Combinaciones listas para elegir con un clic (atajos rápidos, no limitan
  *  las opciones — el resto se arma libremente en el personalizador). */
 const AVATAR_PRESETS = [
-  { fondo: '#2E5C8A', piel: '#E7C9A6', pelo: '#241C14', gafas: 'glasses',    peinado: 'long' },
-  { fondo: '#4FC3C7', piel: '#D9AF87', pelo: '#6B5D3F', gafas: 'glasses',    peinado: 'curly' },
-  { fondo: '#4CAF50', piel: '#F5DCC0', pelo: '#241C14', gafas: 'sunglasses', peinado: 'buzzcut' },
-  { fondo: '#8A7F6E', piel: '#D9AF87', pelo: '#6B5D3F', gafas: 'glasses',    peinado: 'bunUndercut' },
-  { fondo: '#B06B7A', piel: '#8D5B3C', pelo: '#241C14', gafas: 'sunglasses', peinado: 'bald' },
-  { fondo: '#8B7FA8', piel: '#F5DCC0', pelo: '#B5651D', gafas: 'glasses',    peinado: 'beanie' },
-  { fondo: '#4A6670', piel: '#C68642', pelo: '#D9D9D9', gafas: 'glasses',    peinado: 'fade' },
-  { fondo: '#5B8C74', piel: '#E7C9A6', pelo: '#F2D06B', gafas: 'sunglasses', peinado: 'bobCut' },
+  { fondo: '#2E5C8A', piel: '#E7C9A6', pelo: '#241C14', ropa: '#FFFFFF', gafas: 'glasses',    peinado: 'long' },
+  { fondo: '#4FC3C7', piel: '#D9AF87', pelo: '#6B5D3F', ropa: '#241C14', gafas: 'glasses',    peinado: 'curly' },
+  { fondo: '#4CAF50', piel: '#F5DCC0', pelo: '#241C14', ropa: '#5B8C74', gafas: 'sunglasses', peinado: 'buzzcut' },
+  { fondo: '#8A7F6E', piel: '#D9AF87', pelo: '#6B5D3F', ropa: '#D9A860', gafas: 'glasses',    peinado: 'bunUndercut' },
+  { fondo: '#B06B7A', piel: '#8D5B3C', pelo: '#241C14', ropa: '#B06B7A', gafas: 'sunglasses', peinado: 'bald' },
+  { fondo: '#8B7FA8', piel: '#F5DCC0', pelo: '#B5651D', ropa: '#8B7FA8', gafas: 'glasses',    peinado: 'beanie' },
+  { fondo: '#4A6670', piel: '#C68642', pelo: '#D9D9D9', ropa: '#4A6670', gafas: 'glasses',    peinado: 'fade' },
+  { fondo: '#5B8C74', piel: '#E7C9A6', pelo: '#F2D06B', ropa: '#2E5C8A', gafas: 'sunglasses', peinado: 'bobCut' },
 ];
 
 function _avatarDefecto_() { return { ...AVATAR_PRESETS[0] }; }
@@ -810,11 +811,16 @@ function _avatarDefecto_() { return { ...AVATAR_PRESETS[0] }; }
  *  cargó — el llamador ya sabe usar las iniciales como respaldo en ese caso. */
 function _renderAvatar_(cfg) {
   if (!_dicebearPersonas_) return null;
+  // "ropa" es un atributo nuevo — un avatar guardado antes de que existiera
+  // no lo trae, así que se completa con un valor por defecto en vez de
+  // fallar al intentar leerlo.
+  const ropa = cfg.ropa || AVATAR_OPCIONES.ropa[0];
   return _dicebearCore_.createAvatar(_dicebearPersonas_, {
     seed: 'x',
     backgroundColor: [cfg.fondo.replace('#', '')],
     skinColor: [cfg.piel.replace('#', '')],
     hairColor: [cfg.pelo.replace('#', '')],
+    clothingColor: [ropa.replace('#', '')],
     hair: [cfg.peinado],
     eyes: [cfg.gafas],
     mouth: ['smile'],
@@ -845,7 +851,7 @@ function saludoPorHora_() {
 async function abrirMiPerfil() {
   const perfil = leerPerfilLocal_();
   STATE._avatarEnEdicion = perfil.avatar
-    ? { ...perfil.avatar }
+    ? { ropa: AVATAR_OPCIONES.ropa[0], ...perfil.avatar }
     : Number.isInteger(perfil.avatarIdx) && AVATAR_PRESETS[perfil.avatarIdx]
       ? { ...AVATAR_PRESETS[perfil.avatarIdx] }
       : _avatarDefecto_();
@@ -877,6 +883,7 @@ function renderAvatarEditor_() {
   document.getElementById('avatar-swatches-fondo').innerHTML   = AVATAR_OPCIONES.fondo.map(v => swatchColor('fondo', v)).join('');
   document.getElementById('avatar-swatches-piel').innerHTML    = AVATAR_OPCIONES.piel.map(v => swatchColor('piel', v)).join('');
   document.getElementById('avatar-swatches-pelo').innerHTML    = AVATAR_OPCIONES.pelo.map(v => swatchColor('pelo', v)).join('');
+  document.getElementById('avatar-swatches-ropa').innerHTML    = AVATAR_OPCIONES.ropa.map(v => swatchColor('ropa', v)).join('');
   document.getElementById('avatar-swatches-peinado').innerHTML = AVATAR_OPCIONES.peinado.map(v => swatchMini('peinado', v)).join('');
   document.getElementById('avatar-swatches-gafas').innerHTML   = AVATAR_OPCIONES.gafas.map(v => swatchMini('gafas', v)).join('');
   document.getElementById('avatar-swatches-preset').innerHTML  = AVATAR_PRESETS.map((p, i) => `
