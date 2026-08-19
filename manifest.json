@@ -4,8 +4,8 @@
   "description": "Sistema de gestión interno de Óptica-Systems",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#1F3A5F",
-  "theme_color": "#1F3A5F",
+  "background_color": "#241C14",
+  "theme_color": "#241C14",
   "orientation": "portrait-primary",
   "icons": [
     {
