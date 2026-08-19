@@ -274,7 +274,11 @@ document.addEventListener('DOMContentLoaded', () => {
   if (sesion) {
     try {
       const datos = JSON.parse(sesion);
-      if (datos.expira && new Date(datos.expira) > new Date()) {
+      // Si la sesión se guardó con una versión anterior del backend, puede
+      // faltarle el campo "usuario" (login) — descartarla en vez de arrancar
+      // la app con datos incompletos; con eso volvería a pedir iniciar
+      // sesión, que ya lo llena bien.
+      if (datos.expira && new Date(datos.expira) > new Date() && datos.usuario?.usuario) {
         STATE.usuario      = datos.usuario;
         STATE.sesionToken  = datos.token;
         STATE.sesionExpira = datos.expira;
