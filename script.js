@@ -686,6 +686,10 @@ async function iniciarApp() {
   document.getElementById('app').classList.remove('hidden');
 
   renderUsuarioUI();
+  // Precargar la librería de avatares sin bloquear el arranque — mientras
+  // carga, renderUsuarioUI ya mostró las iniciales como respaldo; en
+  // cuanto esté lista se vuelve a llamar para reemplazarlas por el avatar.
+  cargarAvatares_().then(renderUsuarioUI).catch(() => {});
   // Siempre arrancar en el dashboard: si un usuario cierra sesión y otro
   // inicia sesión en la misma pestaña, evita que quede visible el contenido
   // (ya vacío por handleLogout, pero por defensa en profundidad) de una
@@ -739,60 +743,30 @@ STATE._periodoKpi = 'mes';
    👤  PERFIL LOCAL (avatar y nombre para mostrar — solo este dispositivo)
 ══════════════════════════════════════════════════════════════ */
 
-/** Siluetas de pelo (van detrás y delante de la cara) por estilo. */
-const _PEINADOS_ = {
-  corto:  { atras: '', frente: '<path d="M24 40 Q24 14 50 14 Q76 14 76 40 L76 30 Q50 20 24 30 Z"/>' },
-  largo:  { atras: '<path d="M20 90 Q16 40 50 36 Q84 40 80 90 L68 90 Q70 50 50 46 Q30 50 32 90 Z"/>', frente: '<path d="M23 38 Q25 13 50 13 Q75 13 77 38 L77 26 Q50 16 23 26 Z"/>' },
-  rizado: { atras: '', frente: '<circle cx="27" cy="27" r="8"/><circle cx="38" cy="18" r="9"/><circle cx="50" cy="15" r="9"/><circle cx="62" cy="18" r="9"/><circle cx="73" cy="27" r="8"/>' },
-  calvo:  { atras: '', frente: '' },
-  chongo: { atras: '', frente: '<path d="M25 38 Q26 15 50 15 Q74 15 75 38 L75 28 Q50 19 25 28 Z"/><circle cx="50" cy="8" r="7"/>' },
-  pico:   { atras: '', frente: '<path d="M24 34 Q30 12 50 12 Q70 12 76 34 Q66 20 50 24 Q34 20 24 34 Z"/>' },
-  raya:   { atras: '', frente: '<path d="M23 38 Q24 13 47 12 Q30 20 27 38 Z M27 38 Q34 14 50 13 Q76 14 77 38 L77 27 Q52 17 27 27 Z"/>' },
-  gorro:  { atras: '', frente: '<path d="M22 32 Q22 10 50 10 Q78 10 78 32 L78 24 Q50 8 22 24 Z"/><rect x="20" y="28" width="60" height="7" rx="3.5"/>' },
-};
-
-/** Formas de gafas (siempre presentes — guiño directo al giro óptico del negocio). */
-const _GAFAS_ = {
-  redonda: '<circle cx="38" cy="46" r="10"/><circle cx="62" cy="46" r="10"/><line x1="48" y1="46" x2="52" y2="46"/><line x1="28" y1="43" x2="21" y2="40"/><line x1="72" y1="43" x2="79" y2="40"/>',
-  cuadrada: '<rect x="28" y="38" width="19" height="15" rx="3"/><rect x="53" y="38" width="19" height="15" rx="3"/><line x1="47" y1="45" x2="53" y2="45"/><line x1="28" y1="42" x2="21" y2="39"/><line x1="72" y1="42" x2="79" y2="39"/>',
-  gatuna:  '<path d="M27 48 Q27 36 38 37 Q48 38 47 48 Q47 54 38 54 Q27 54 27 48 Z"/><path d="M73 48 Q73 36 62 37 Q52 38 53 48 Q53 54 62 54 Q73 54 73 48 Z"/><line x1="47" y1="43" x2="53" y2="43"/><line x1="27" y1="41" x2="20" y2="36"/><line x1="73" y1="41" x2="80" y2="36"/>',
-  pasta:   '<rect x="26" y="37" width="21" height="17" rx="6"/><rect x="53" y="37" width="21" height="17" rx="6"/><line x1="47" y1="45" x2="53" y2="45"/><line x1="26" y1="42" x2="19" y2="39"/><line x1="74" y1="42" x2="81" y2="39"/>',
-};
-
-let _avatarIdSeq_ = 0;
-/** Genera el SVG de un avatar-personaje (siempre con lentes — guiño a "Óptica"). */
-function _avatarCharSVG_(bg, piel, pelo, gafas, peinado) {
-  const p = _PEINADOS_[peinado];
-  const uid = 'av' + (_avatarIdSeq_++);
-  const ojo = _sombrear_(_sombrear_(piel));
-  return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <radialGradient id="${uid}" cx="50%" cy="35%" r="75%">
-        <stop offset="0%" stop-color="${_aclarar_(bg)}"/>
-        <stop offset="100%" stop-color="${bg}"/>
-      </radialGradient>
-    </defs>
-    <circle cx="50" cy="50" r="50" fill="url(#${uid})"/>
-    <path d="M14 100 Q14 66 50 66 Q86 66 86 100 Z" fill="${_sombrear_(bg)}"/>
-    <g fill="${pelo}">${p.atras}</g>
-    <ellipse cx="24.5" cy="45" rx="4" ry="5.5" fill="${_sombrear_(piel)}"/>
-    <ellipse cx="75.5" cy="45" rx="4" ry="5.5" fill="${_sombrear_(piel)}"/>
-    <circle cx="50" cy="44" r="25" fill="${piel}"/>
-    <path d="M27 56 Q50 68 73 56 Q73 66 50 66 Q27 66 27 56 Z" fill="${_sombrear_(piel)}" opacity=".35"/>
-    <ellipse cx="33" cy="52" rx="5" ry="3" fill="rgba(224,122,95,.28)"/>
-    <ellipse cx="67" cy="52" rx="5" ry="3" fill="rgba(224,122,95,.28)"/>
-    <path d="M34 39.5 Q38 36.5 42.5 38.5" stroke="${pelo}" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-    <path d="M57.5 38.5 Q62 36.5 66 39.5" stroke="${pelo}" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-    <circle cx="38" cy="46" r="2.3" fill="${ojo}"/>
-    <circle cx="62" cy="46" r="2.3" fill="${ojo}"/>
-    <path d="M43 58 Q50 62.5 57 58" stroke="${ojo}" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-    <g fill="${pelo}">${p.frente}</g>
-    <g stroke="${pelo}" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">${_GAFAS_[gafas]}</g>
-    <line x1="33.5" y1="41.5" x2="36.5" y2="44.5" stroke="rgba(255,255,255,.6)" stroke-width="1.3" stroke-linecap="round"/>
-    <line x1="57.5" y1="41.5" x2="60.5" y2="44.5" stroke="rgba(255,255,255,.6)" stroke-width="1.3" stroke-linecap="round"/>
-  </svg>`;
+/** Avatares generados con DiceBear (estilo "Personas" de Draftbit, CC BY 4.0
+ *  — la atribución va incrustada como metadata dentro de cada SVG generado,
+ *  el mecanismo que la propia librería ofrece para esto, así que no hace
+ *  falta un crédito visible aparte). Se carga bajo demanda, no en el
+ *  arranque de la página, y una sola vez. Mientras carga (o si la carga
+ *  falla) _renderAvatar_ devuelve null y el llamador usa las iniciales como
+ *  respaldo — el mismo patrón que ya existía para "sin avatar elegido". */
+let _dicebearCore_ = null;
+let _dicebearPersonas_ = null;
+let _dicebearCargando_ = null;
+function cargarAvatares_() {
+  if (_dicebearPersonas_) return Promise.resolve();
+  if (_dicebearCargando_) return _dicebearCargando_;
+  _dicebearCargando_ = Promise.all([
+    import('https://cdn.jsdelivr.net/npm/@dicebear/core@9.4.2/+esm'),
+    import('https://cdn.jsdelivr.net/npm/@dicebear/personas@9.4.2/+esm'),
+  ]).then(([core, personas]) => {
+    _dicebearCore_ = core;
+    _dicebearPersonas_ = personas;
+  }).catch(err => { _dicebearCargando_ = null; throw err; });
+  return _dicebearCargando_;
 }
-/** Variante ~35% más clara del color recibido, para el brillo superior del degradado de fondo. */
+
+/** Variante ~35% más clara del color recibido — la usa la sombra/luz de los cubos 3D del dashboard. */
 function _aclarar_(hex) {
   const n = parseInt(hex.slice(1), 16);
   const f = c => Math.min(255, Math.round(c + (255 - c) * 0.35));
@@ -807,30 +781,49 @@ function _sombrear_(hex) {
 
 /** Opciones disponibles en el personalizador de avatar — cada atributo se
  *  elige de forma independiente, así que las combinaciones posibles son
- *  muchas más que un puñado de diseños fijos. */
+ *  muchas más que un puñado de diseños fijos. "gafas" se restringe a
+ *  lentes normales u oscuros — nunca sin lentes, guiño a "Óptica". */
 const AVATAR_OPCIONES = {
   fondo: ['#2E5C8A', '#4FC3C7', '#4CAF50', '#8A7F6E', '#B06B7A', '#8B7FA8', '#4A6670', '#5B8C74'],
   piel:  ['#F5DCC0', '#E7C9A6', '#D9AF87', '#C68642', '#8D5B3C'],
   pelo:  ['#241C14', '#6B5D3F', '#B5651D', '#D9D9D9', '#F2D06B'],
-  peinado: Object.keys(_PEINADOS_),
-  gafas:   Object.keys(_GAFAS_),
+  peinado: ['long', 'bobCut', 'curly', 'bald', 'buzzcut', 'fade', 'beanie', 'bunUndercut'],
+  gafas:   ['glasses', 'sunglasses'],
 };
 
 /** Combinaciones listas para elegir con un clic (atajos rápidos, no limitan
  *  las opciones — el resto se arma libremente en el personalizador). */
 const AVATAR_PRESETS = [
-  { fondo: '#2E5C8A', piel: '#E7C9A6', pelo: '#241C14', gafas: 'redonda',  peinado: 'corto' },
-  { fondo: '#4FC3C7', piel: '#D9AF87', pelo: '#6B5D3F', gafas: 'cuadrada', peinado: 'largo' },
-  { fondo: '#4CAF50', piel: '#F5DCC0', pelo: '#241C14', gafas: 'gatuna',   peinado: 'chongo' },
-  { fondo: '#8A7F6E', piel: '#D9AF87', pelo: '#6B5D3F', gafas: 'pasta',    peinado: 'rizado' },
-  { fondo: '#B06B7A', piel: '#8D5B3C', pelo: '#241C14', gafas: 'redonda', peinado: 'calvo' },
-  { fondo: '#8B7FA8', piel: '#F5DCC0', pelo: '#B5651D', gafas: 'cuadrada', peinado: 'pico' },
-  { fondo: '#4A6670', piel: '#C68642', pelo: '#D9D9D9', gafas: 'gatuna',   peinado: 'raya' },
-  { fondo: '#5B8C74', piel: '#E7C9A6', pelo: '#F2D06B', gafas: 'pasta',    peinado: 'gorro' },
+  { fondo: '#2E5C8A', piel: '#E7C9A6', pelo: '#241C14', gafas: 'glasses',    peinado: 'long' },
+  { fondo: '#4FC3C7', piel: '#D9AF87', pelo: '#6B5D3F', gafas: 'glasses',    peinado: 'curly' },
+  { fondo: '#4CAF50', piel: '#F5DCC0', pelo: '#241C14', gafas: 'sunglasses', peinado: 'buzzcut' },
+  { fondo: '#8A7F6E', piel: '#D9AF87', pelo: '#6B5D3F', gafas: 'glasses',    peinado: 'bunUndercut' },
+  { fondo: '#B06B7A', piel: '#8D5B3C', pelo: '#241C14', gafas: 'sunglasses', peinado: 'bald' },
+  { fondo: '#8B7FA8', piel: '#F5DCC0', pelo: '#B5651D', gafas: 'glasses',    peinado: 'beanie' },
+  { fondo: '#4A6670', piel: '#C68642', pelo: '#D9D9D9', gafas: 'glasses',    peinado: 'fade' },
+  { fondo: '#5B8C74', piel: '#E7C9A6', pelo: '#F2D06B', gafas: 'sunglasses', peinado: 'bobCut' },
 ];
 
 function _avatarDefecto_() { return { ...AVATAR_PRESETS[0] }; }
-function _renderAvatar_(cfg) { return _avatarCharSVG_(cfg.fondo, cfg.piel, cfg.pelo, cfg.gafas, cfg.peinado); }
+
+/** Devuelve el SVG del avatar, o null si la librería de avatares todavía no
+ *  cargó — el llamador ya sabe usar las iniciales como respaldo en ese caso. */
+function _renderAvatar_(cfg) {
+  if (!_dicebearPersonas_) return null;
+  return _dicebearCore_.createAvatar(_dicebearPersonas_, {
+    seed: 'x',
+    backgroundColor: [cfg.fondo.replace('#', '')],
+    skinColor: [cfg.piel.replace('#', '')],
+    hairColor: [cfg.pelo.replace('#', '')],
+    hair: [cfg.peinado],
+    eyes: [cfg.gafas],
+    mouth: ['smile'],
+    body: ['rounded'],
+    nose: ['mediumRound'],
+    facialHairProbability: 0,
+    radius: 50,
+  }).toString();
+}
 
 function _perfilLocalKey_() {
   return 'opticasystems_perfil_' + (STATE.usuario?.id || '');
@@ -849,32 +842,37 @@ function saludoPorHora_() {
   return 'Buenas noches';
 }
 
-function abrirMiPerfil() {
+async function abrirMiPerfil() {
   const perfil = leerPerfilLocal_();
   STATE._avatarEnEdicion = perfil.avatar
     ? { ...perfil.avatar }
     : Number.isInteger(perfil.avatarIdx) && AVATAR_PRESETS[perfil.avatarIdx]
       ? { ...AVATAR_PRESETS[perfil.avatarIdx] }
       : _avatarDefecto_();
-  renderAvatarEditor_();
   document.getElementById('perfil-usuario').value = STATE.usuario.usuario;
   document.getElementById('perfil-nombre').value = STATE.usuario.nombre;
   document.getElementById('perfil-rol').value = STATE.usuario.rol;
   openModal('modal-mi-perfil');
+  try {
+    await cargarAvatares_();
+  } catch {
+    showToast('No se pudo cargar el personalizador de avatar (revisa tu conexión)', 'warning');
+  }
+  renderAvatarEditor_();
 }
 
 /** Redibuja el personalizador completo (vista previa + cada fila de opciones)
  *  con la configuración actual en STATE._avatarEnEdicion. */
 function renderAvatarEditor_() {
   const cfg = STATE._avatarEnEdicion;
-  document.getElementById('avatar-preview').innerHTML = _renderAvatar_(cfg);
+  document.getElementById('avatar-preview').innerHTML = _renderAvatar_(cfg) || '';
 
   const swatchColor = (attr, val) => `
     <div class="avatar-swatch-color${cfg[attr] === val ? ' activo' : ''}" style="background:${val}"
          onclick="cambiarAtributoAvatar_('${attr}','${val}')" title="${val}"></div>`;
   const swatchMini = (attr, val) => `
     <div class="avatar-swatch-mini${cfg[attr] === val ? ' activo' : ''}"
-         onclick="cambiarAtributoAvatar_('${attr}','${val}')">${_renderAvatar_({ ...cfg, [attr]: val })}</div>`;
+         onclick="cambiarAtributoAvatar_('${attr}','${val}')">${_renderAvatar_({ ...cfg, [attr]: val }) || ''}</div>`;
 
   document.getElementById('avatar-swatches-fondo').innerHTML   = AVATAR_OPCIONES.fondo.map(v => swatchColor('fondo', v)).join('');
   document.getElementById('avatar-swatches-piel').innerHTML    = AVATAR_OPCIONES.piel.map(v => swatchColor('piel', v)).join('');
@@ -882,7 +880,7 @@ function renderAvatarEditor_() {
   document.getElementById('avatar-swatches-peinado').innerHTML = AVATAR_OPCIONES.peinado.map(v => swatchMini('peinado', v)).join('');
   document.getElementById('avatar-swatches-gafas').innerHTML   = AVATAR_OPCIONES.gafas.map(v => swatchMini('gafas', v)).join('');
   document.getElementById('avatar-swatches-preset').innerHTML  = AVATAR_PRESETS.map((p, i) => `
-    <div class="avatar-swatch-mini" onclick="aplicarPresetAvatar_(${i})" title="Combinación ${i + 1}">${_renderAvatar_(p)}</div>
+    <div class="avatar-swatch-mini" onclick="aplicarPresetAvatar_(${i})" title="Combinación ${i + 1}">${_renderAvatar_(p) || ''}</div>
   `).join('');
 }
 

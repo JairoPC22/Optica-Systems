@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE = 'optica-systems-v7';
+const CACHE = 'optica-systems-v8';
 const SHELL = [
   './',
   './index.html',
@@ -129,8 +129,8 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // ── CDN (feather, chart.js, emailjs, echarts + echarts-gl cargados bajo
-  //      demanda para las gráficas 3D) → caché primero ──
+  // ── CDN (feather, chart.js, emailjs, DiceBear cargado bajo demanda
+  //      para el personalizador de avatar) → caché primero ──
   if (url.hostname.includes('cdn.jsdelivr.net')) {
     e.respondWith(
       caches.match(e.request).then(cached => {
