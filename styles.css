@@ -494,10 +494,27 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   gap: .8rem;
   padding: 1rem;
   margin: .8rem .6rem;
+  width: calc(100% - 1.2rem);
   background: var(--gris-claro);
   border-radius: var(--radius);
   border: 1px solid var(--gris-borde);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
 }
+.sidebar-user-card:hover { background: var(--acento-luz); border-color: var(--acento); }
+.sidebar-user-card-chevron {
+  width: 16px; height: 16px;
+  color: var(--gris-medio);
+  flex-shrink: 0;
+  margin-left: auto;
+  opacity: 0;
+  transform: translateX(-3px);
+  transition: opacity var(--transition), transform var(--transition);
+}
+.sidebar-user-card:hover .sidebar-user-card-chevron { opacity: 1; transform: translateX(0); }
+.sidebar.collapsed .sidebar-user-card-chevron { display: none; }
 .user-avatar {
   width: 38px; height: 38px;
   background: linear-gradient(135deg, var(--azul-medio), var(--turquesa-boton));
@@ -535,6 +552,17 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   padding: .9rem .5rem .3rem;
   white-space: nowrap;
 }
+.form-section-title {
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--gris-label);
+  margin: 1.5rem 0 .6rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--gris-borde);
+}
+.form-section-title:first-child { margin-top: 0; padding-top: 0; border-top: none; }
 .nav-section-label:first-child { padding-top: .4rem; }
 .nav-item {
   display: flex;
@@ -865,15 +893,17 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   margin-bottom: 1.4rem;
   background:
     radial-gradient(ellipse 480px 320px at 100% 0%, rgba(255,255,255,.28) 0%, transparent 65%),
+    radial-gradient(ellipse 260px 200px at 0% 100%, rgba(255,255,255,.14) 0%, transparent 60%),
     linear-gradient(120deg, var(--acento-luz) 0%, var(--acento) 100%);
   box-shadow: var(--shadow-acento);
   animation: dashHeroIn .5s cubic-bezier(.16,1,.3,1);
 }
 @keyframes dashHeroIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-/* El fondo del panel siempre es claro (crema/taupe), aunque el resto de
-   la página esté en modo oscuro — por eso el texto de aquí usa un color
-   fijo (#241C14) en vez de var(--azul-oscuro), que en modo oscuro se
-   invierte a un tono casi blanco y quedaría invisible sobre este fondo. */
+/* El texto usa un color de tinta fijo (#241C14) en vez de var(--azul-oscuro)
+   porque en modo oscuro ese token se invierte a casi blanco — y aquí el
+   fondo sigue siendo un degradado claro incluso en modo oscuro (ver
+   overrides body.dark más abajo, con tonos más profundos para no quedar
+   como una tarjeta clara "flotando" sobre el resto de la interfaz oscura). */
 .dash-hero-badge {
   display: inline-flex;
   align-items: center;
@@ -1268,6 +1298,15 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   border-top: 1px solid var(--gris-borde);
   flex-shrink: 0;
 }
+.modal-footer-split { justify-content: space-between; }
+/* Los modales que envuelven body+footer en <form> rompían el recorte/scroll:
+   .modal es flex-column y .modal-body necesita ser un hijo flex directo
+   para que su flex:1 + overflow-y:auto funcionen; un <form> de por medio
+   (display:block por defecto) no participa del layout flex, así que el
+   contenido largo simplemente se salía del modal en vez de hacer scroll
+   interno. display:contents saca al <form> del árbol de caja sin afectar
+   su comportamiento de envío/eventos. */
+.modal > form { display: contents; }
 
 /* ── FORM GRID ── */
 .form-grid-2 {
@@ -1282,7 +1321,10 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   color: var(--azul-medio) !important;
   font-weight: 700;
   font-family: var(--font-mono);
+  border-style: dashed !important;
+  cursor: not-allowed;
 }
+.input-readonly:focus { box-shadow: none !important; }
 
 .alert-info {
   display: flex;
@@ -2335,6 +2377,7 @@ body.dark {
 
 body.dark .sidebar        { background: #12151A; border-right: 1px solid #232830; }
 body.dark .sidebar-user-card { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.05); }
+body.dark .sidebar-user-card:hover { background: rgba(255,255,255,.08); border-color: var(--acento); }
 body.dark .nav-item:hover    { background: rgba(255,255,255,.06); }
 body.dark .nav-item.active   { background: rgba(79,195,199,.14); color: var(--turquesa); }
 body.dark .sidebar-header    { border-color: rgba(255,255,255,.05); }
@@ -2375,6 +2418,17 @@ body.dark .modal-footer   { border-color: #333A44; }
 body.dark .modal-overlay  { background: rgba(5,12,20,.75); }
 
 body.dark .kpi-card       { background: #232830; border-color: #333A44; }
+/* Versión más profunda del degradado dorado — la clara del modo día se ve
+   demasiado brillante/"flotando" sobre el resto de la interfaz oscura. */
+body.dark .dash-hero {
+  background:
+    radial-gradient(ellipse 480px 320px at 100% 0%, rgba(255,255,255,.08) 0%, transparent 65%),
+    radial-gradient(ellipse 260px 200px at 0% 100%, rgba(255,255,255,.04) 0%, transparent 60%),
+    linear-gradient(120deg, #4A4030 0%, #6B5D42 100%);
+}
+body.dark .dash-hero-badge  { background: rgba(255,255,255,.12); color: #E7EAEE; }
+body.dark .dash-hero-titulo { color: #E7EAEE; }
+body.dark .dash-hero-sub    { color: rgba(231,234,238,.75); }
 body.dark .kpi-value      { color: #E7EAEE; }
 
 body.dark .filter-tab          { background: #232830; border-color: #333A44; color: #99A2AD; }
@@ -2412,6 +2466,12 @@ body.dark .metrica-valor      { color: #E7EAEE; }
 body.dark .donut-label        { color: #99A2AD; }
 body.dark .donut-num          { color: #E7EAEE; }
 
+/* El fondo de .btn-primary sigue siendo claro (degradado --acento) en modo
+   oscuro a propósito — pero var(--azul-oscuro) ahí se vuelve casi blanco
+   para el texto normal, dejando el botón casi ilegible. Se fija a un tono
+   de tinta oscura siempre, sin importar el tema. */
+body.dark .btn-primary,
+body.dark .btn-login { color: #12151A; }
 body.dark .btn-outline { background: #232830; border-color: #333A44; color: #E7EAEE; }
 body.dark .btn-sm      { background: #232830; border-color: #333A44; color: #99A2AD; }
 body.dark .btn-3d:not(.activo) { background: #232830; border-color: #333A44; color: #99A2AD; }

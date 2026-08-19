@@ -116,13 +116,14 @@
         </button>
       </div>
 
-      <div class="sidebar-user-card">
+      <button class="sidebar-user-card" onclick="abrirMiPerfil()" title="Abrir mi perfil">
         <div class="user-avatar" id="sidebar-avatar">JD</div>
         <div class="user-info">
           <div class="user-name" id="sidebar-username">Cargando...</div>
           <div class="user-role" id="sidebar-role">—</div>
         </div>
-      </div>
+        <i data-feather="chevron-right" class="sidebar-user-card-chevron"></i>
+      </button>
 
       <nav class="sidebar-nav">
         <div class="nav-section-label">PRINCIPAL</div>
@@ -181,10 +182,6 @@
       </nav>
 
       <div class="sidebar-footer">
-        <button class="btn-logout btn-sidebar-action" onclick="abrirMiPerfil()">
-          <i data-feather="user"></i>
-          <span>Mi perfil</span>
-        </button>
         <button class="btn-logout btn-sidebar-action" onclick="abrirCambioPassword()">
           <i data-feather="key"></i>
           <span>Cambiar contraseña</span>
@@ -1799,8 +1796,8 @@
     </div>
     <form onsubmit="guardarMiPerfil(event)">
       <div class="modal-body">
+        <div class="form-section-title">Avatar</div>
         <div class="form-group">
-          <label>Avatar</label>
           <div class="avatar-editor" id="avatar-editor">
             <div class="avatar-preview" id="avatar-preview"></div>
             <div>
@@ -1829,6 +1826,12 @@
             </div>
           </div>
         </div>
+
+        <div class="form-section-title">Cuenta</div>
+        <div class="form-group">
+          <label for="perfil-usuario">Usuario</label>
+          <input type="text" id="perfil-usuario" class="input-readonly" readonly tabindex="-1" />
+        </div>
         <div class="form-group">
           <label for="perfil-nombre">Nombre para mostrar</label>
           <input type="text" id="perfil-nombre" maxlength="60" placeholder="Tu nombre" />
@@ -1836,11 +1839,15 @@
         </div>
         <div class="form-group">
           <label>Rol</label>
-          <input type="text" id="perfil-rol" class="input-readonly" readonly />
+          <div class="input-icon-wrap">
+            <i data-feather="lock" class="input-icon"></i>
+            <input type="text" id="perfil-rol" class="input-readonly" readonly tabindex="-1" />
+          </div>
           <small class="form-hint">Fijo — solo otro administrador puede cambiarlo, y nunca el tuyo propio.</small>
         </div>
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer modal-footer-split">
+        <button type="button" class="btn-outline" onclick="abrirCambioPassword()"><i data-feather="key"></i> Cambiar contraseña</button>
         <button type="submit" class="btn-primary"><i data-feather="save"></i> Guardar</button>
       </div>
     </form>

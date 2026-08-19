@@ -761,14 +761,21 @@ function _avatarCharSVG_(bg, piel, pelo, gafas, peinado) {
     <circle cx="50" cy="50" r="50" fill="url(#${uid})"/>
     <path d="M14 100 Q14 66 50 66 Q86 66 86 100 Z" fill="${_sombrear_(bg)}"/>
     <g fill="${pelo}">${p.atras}</g>
+    <ellipse cx="24.5" cy="45" rx="4" ry="5.5" fill="${_sombrear_(piel)}"/>
+    <ellipse cx="75.5" cy="45" rx="4" ry="5.5" fill="${_sombrear_(piel)}"/>
     <circle cx="50" cy="44" r="25" fill="${piel}"/>
+    <path d="M27 56 Q50 68 73 56 Q73 66 50 66 Q27 66 27 56 Z" fill="${_sombrear_(piel)}" opacity=".35"/>
     <ellipse cx="33" cy="52" rx="5" ry="3" fill="rgba(224,122,95,.28)"/>
     <ellipse cx="67" cy="52" rx="5" ry="3" fill="rgba(224,122,95,.28)"/>
+    <path d="M34 39.5 Q38 36.5 42.5 38.5" stroke="${pelo}" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <path d="M57.5 38.5 Q62 36.5 66 39.5" stroke="${pelo}" stroke-width="1.8" fill="none" stroke-linecap="round"/>
     <circle cx="38" cy="46" r="2.3" fill="${ojo}"/>
     <circle cx="62" cy="46" r="2.3" fill="${ojo}"/>
     <path d="M43 58 Q50 62.5 57 58" stroke="${ojo}" stroke-width="2.4" fill="none" stroke-linecap="round"/>
     <g fill="${pelo}">${p.frente}</g>
     <g stroke="${pelo}" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">${_GAFAS_[gafas]}</g>
+    <line x1="33.5" y1="41.5" x2="36.5" y2="44.5" stroke="rgba(255,255,255,.6)" stroke-width="1.3" stroke-linecap="round"/>
+    <line x1="57.5" y1="41.5" x2="60.5" y2="44.5" stroke="rgba(255,255,255,.6)" stroke-width="1.3" stroke-linecap="round"/>
   </svg>`;
 }
 /** Variante ~35% más clara del color recibido, para el brillo superior del degradado de fondo. */
@@ -836,6 +843,7 @@ function abrirMiPerfil() {
       ? { ...AVATAR_PRESETS[perfil.avatarIdx] }
       : _avatarDefecto_();
   renderAvatarEditor_();
+  document.getElementById('perfil-usuario').value = STATE.usuario.usuario;
   document.getElementById('perfil-nombre').value = STATE.usuario.nombre;
   document.getElementById('perfil-rol').value = STATE.usuario.rol;
   openModal('modal-mi-perfil');
@@ -1126,11 +1134,11 @@ function renderUsuariosTabla(lista) {
       </td>
       <td>
         <div class="action-btns">
-          <button class="btn-action" onclick="abrirResetPassword('${esc(u.usuario)}')" title="Restablecer contraseña"><i data-feather="key"></i></button>
+          ${normUsr(u.usuario) === propioUsuario ? '' : `<button class="btn-action" onclick="abrirResetPassword('${esc(u.usuario)}')" title="Restablecer contraseña"><i data-feather="key"></i></button>`}
           <button class="btn-action" onclick="confirmarRevocarSesiones('${esc(u.usuario)}')" title="Revocar sesiones activas"><i data-feather="log-out"></i></button>
-          <button class="btn-action ${u.activo ? 'delete' : ''}" onclick="confirmarCambiarActivoUsuario('${esc(u.usuario)}', ${!u.activo})" title="${u.activo ? 'Desactivar' : 'Activar'}">
+          ${normUsr(u.usuario) === propioUsuario ? '' : `<button class="btn-action ${u.activo ? 'delete' : ''}" onclick="confirmarCambiarActivoUsuario('${esc(u.usuario)}', ${!u.activo})" title="${u.activo ? 'Desactivar' : 'Activar'}">
             <i data-feather="${u.activo ? 'user-x' : 'user-check'}"></i>
-          </button>
+          </button>`}
         </div>
       </td>
     </tr>
