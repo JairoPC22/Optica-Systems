@@ -382,7 +382,16 @@ function validarSesion_(token) {
         return { valido: false, motivo: 'El usuario está inactivo.' };
       }
       // Renovación deslizante del último uso (no de la expiración total).
-      datos.hoja.getRange(s._fila, 7).setValue(ahora.toISOString());
+      // Escribir en la hoja en CADA petición autenticada (login, cada carga
+      // de datos, cada clic) hacía lenta a toda la app: cada escritura a
+      // Sheets tiene un costo real en Apps Script. Con la sesión activa se
+      // reciben muchas peticiones por minuto; basta con refrescar el valor
+      // cada pocos minutos para que la expiración por inactividad siga
+      // funcionando igual, sin pagar ese costo en cada petición.
+      var ultimoUsoPrevio = s.ultimoUso ? new Date(s.ultimoUso) : null;
+      if (!ultimoUsoPrevio || (ahora - ultimoUsoPrevio) > 3 * 60 * 1000) {
+        datos.hoja.getRange(s._fila, 7).setValue(ahora.toISOString());
+      }
       return {
         valido: true,
         usuario: { id: usuarioActual.id, usuario: usuarioActual.usuario, nombre: usuarioActual.nombre, rol: usuarioActual.rol },
@@ -733,10 +742,12 @@ function manejarCambioPassword_(sesionUsuario, tokenActual, payload) {
     return { ok: false, error: 'La contraseña actual no es correcta.' };
   }
 
-  // La nueva contraseña debe ser distinta de la actual (mismo salt/iteraciones
-  // que ya se usaron arriba, así que basta comparar contra el mismo hash).
-  var hashNuevaConSaltActual = calcularHashPassword_(nueva, String(fila.salt), iteraciones);
-  if (compararConstante_(hashNuevaConSaltActual, String(fila.hash))) {
+  // La nueva contraseña debe ser distinta de la actual. La verificación de
+  // arriba ya confirmó que "actual" ES la contraseña real vigente, así que
+  // basta comparar los dos textos planos directamente — evita correr un
+  // segundo PBKDF2 completo (10,000 iteraciones) solo para esta comparación,
+  // que duplicaba el tiempo de respuesta de todo el endpoint sin necesidad.
+  if (compararConstante_(actual, nueva)) {
     return { ok: false, error: 'La nueva contraseña debe ser distinta de la actual.' };
   }
 
