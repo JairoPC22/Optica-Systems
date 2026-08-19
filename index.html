@@ -22,7 +22,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>Óptica-Systems — Sistema Interno</title>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1F3A5F">
+  <meta name="theme-color" content="#241C14">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Óptica-Systems">
@@ -36,7 +36,7 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
   <!-- EmailJS -->
   <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4.4.1/dist/email.min.js"
           integrity="sha384-SALc35EccAf6RzGw4iNsyj7kTPr33K7RoGzYu+7heZhT8s0GZouafRiCg1qy44AS" crossorigin="anonymous"></script>
@@ -171,7 +171,7 @@
         <button class="nav-item" onclick="navigateTo('inventario')" data-section="inventario">
           <i data-feather="package"></i>
           <span>Inventario</span>
-          <span class="nav-badge" id="badge-stock" style="background:var(--amarillo);color:#333">0</span>
+          <span class="nav-badge" id="badge-stock" style="background:var(--amarillo);color:var(--azul-oscuro)">0</span>
         </button>
 
         <div class="nav-section-label" id="nav-section-sistema">SISTEMA</div>
@@ -209,6 +209,13 @@
           <div class="breadcrumb">
             <span id="breadcrumb-section">Dashboard</span>
           </div>
+          <div class="search-box topbar-search">
+            <i data-feather="search"></i>
+            <input type="text" id="topbar-buscar-seccion" placeholder="Buscar sección..." autocomplete="off"
+              oninput="filtrarSugerenciasSeccion(this.value)"
+              onkeydown="if(event.key==='Enter') irASeccionBuscada(this.value)" />
+            <div id="topbar-buscar-sugerencias" class="topbar-buscar-sugerencias hidden"></div>
+          </div>
         </div>
         <div class="topbar-right">
           <div class="topbar-date" id="topbar-date"></div>
@@ -241,10 +248,19 @@
           </div>
         </div>
 
+<!-- PANEL DESTACADO -->
+        <div class="dash-hero">
+          <div class="dash-hero-badge">
+            <span class="dash-hero-dot"></span> Datos en vivo · <span id="dash-hero-fecha"></span>
+          </div>
+          <h2 class="dash-hero-titulo" id="dash-hero-saludo">Bienvenido de nuevo</h2>
+          <p class="dash-hero-sub">Aquí tienes el pulso de tu óptica: ventas, adeudos e inventario, todo en un solo lugar.</p>
+        </div>
+
 <!-- ALERTAS DE REVISIÓN ANUAL -->
         <div id="revision-anual-alerta" class="revision-alerta hidden">
           <div class="revision-header">
-            <div class="revision-icon">📅</div>
+            <div class="revision-icon"><i data-feather="calendar"></i></div>
             <div>
               <div class="revision-title">Clientes que necesitan revisión anual</div>
               <div class="revision-sub">Llevan más de 11 meses desde su última compra de lentes</div>
@@ -267,7 +283,7 @@
           </div>
           <div id="dash-empleado-wrap" class="hidden">
             <select id="filter-empleado-dash" class="select-sm" onchange="cambiarFiltroEmpleadoDash(this.value)" style="min-width:190px;font-size:.78rem;">
-              <option value="">👤 Todos los empleados</option>
+              <option value="">Todos los empleados</option>
             </select>
           </div>
         </div>
@@ -356,7 +372,7 @@
             <span style="color:var(--gris-label);font-size:.8rem;">—</span>
             <input type="date" id="dash-fecha-hasta" class="select-sm" style="min-width:130px;font-size:.78rem;" 
               oninput="aplicarRangoPersonalizado()" title="Hasta" />
-            <button class="btn-sm" onclick="limpiarRangoPersonalizado()" title="Limpiar rango">✕</button>
+            <button class="btn-sm" onclick="limpiarRangoPersonalizado()" title="Limpiar rango"><i data-feather="x"></i></button>
           </div>
         </div>
         </div>
@@ -558,7 +574,7 @@
             </select>
             <div id="ventas-empleado-wrap" class="hidden">
               <select id="filter-empleado-ventas" class="select-sm" onchange="filterVentas()">
-                <option value="">👤 Todos los empleados</option>
+                <option value="">Todos los empleados</option>
               </select>
             </div>
             <div class="ventas-periodo-tabs" id="ventas-periodo-tabs">
@@ -571,7 +587,7 @@
               <input type="date" id="ventas-fecha-desde" class="select-sm" style="min-width:130px;font-size:.78rem;" oninput="filtrarVentasRango()" title="Desde" />
               <span style="color:var(--gris-label);font-size:.8rem;">—</span>
               <input type="date" id="ventas-fecha-hasta" class="select-sm" style="min-width:130px;font-size:.78rem;" oninput="filtrarVentasRango()" title="Hasta" />
-              <button class="btn-sm" onclick="limpiarFiltroVentasFecha()" title="Limpiar fechas">✕</button>
+              <button class="btn-sm" onclick="limpiarFiltroVentasFecha()" title="Limpiar fechas"><i data-feather="x"></i></button>
             </div>
           </div>
           <div class="table-wrap">
@@ -1086,7 +1102,7 @@
       <!-- SECCIÓN 1: MOTIVO DE CONSULTA -->
       <div class="clinica-acordeon">
         <button type="button" class="acordeon-header" onclick="toggleAcordeon(this)">
-          <span>💬 Motivo de Consulta</span>
+          <span><i data-feather="message-circle"></i> Motivo de Consulta</span>
           <i data-feather="chevron-down" class="acordeon-icon"></i>
         </button>
         <div class="acordeon-body">
@@ -1147,7 +1163,7 @@
       <!-- SECCIÓN 2: ANTECEDENTES REFRACTOMÉTRICOS -->
       <div class="clinica-acordeon">
         <button type="button" class="acordeon-header" onclick="toggleAcordeon(this)">
-          <span>🔬 Antecedentes Refractométricos</span>
+          <span><i data-feather="sliders"></i> Antecedentes Refractométricos</span>
           <i data-feather="chevron-down" class="acordeon-icon"></i>
         </button>
         <div class="acordeon-body">
@@ -1193,7 +1209,7 @@
       <!-- SECCIÓN 3: ANTECEDENTES HEREDOFAMILIARES -->
       <div class="clinica-acordeon">
         <button type="button" class="acordeon-header" onclick="toggleAcordeon(this)">
-          <span>🧬 Antecedentes Heredofamiliares</span>
+          <span><i data-feather="users"></i> Antecedentes Heredofamiliares</span>
           <i data-feather="chevron-down" class="acordeon-icon"></i>
         </button>
         <div class="acordeon-body">
@@ -1217,7 +1233,7 @@
       <!-- SECCIÓN 4: REVISIÓN DE ANEXOS -->
       <div class="clinica-acordeon">
         <button type="button" class="acordeon-header" onclick="toggleAcordeon(this)">
-          <span>🔎 Revisión de Anexos</span>
+          <span><i data-feather="search"></i> Revisión de Anexos</span>
           <i data-feather="chevron-down" class="acordeon-icon"></i>
         </button>
         <div class="acordeon-body">
@@ -1251,7 +1267,7 @@
       <!-- SECCIÓN 5: AGUDEZA VISUAL -->
       <div class="clinica-acordeon">
         <button type="button" class="acordeon-header" onclick="toggleAcordeon(this)">
-          <span>👁️ Agudeza Visual</span>
+          <span><i data-feather="eye"></i> Agudeza Visual</span>
           <i data-feather="chevron-down" class="acordeon-icon"></i>
         </button>
         <div class="acordeon-body">
@@ -1293,7 +1309,7 @@
       <!-- SECCIÓN 6: TOMA DE AGUDEZA VISUAL COMPLETA -->
       <div class="clinica-acordeon">
         <button type="button" class="acordeon-header" onclick="toggleAcordeon(this)">
-          <span>📐 Toma de Agudeza Visual — Detalles</span>
+          <span><i data-feather="crosshair"></i> Toma de Agudeza Visual — Detalles</span>
           <i data-feather="chevron-down" class="acordeon-icon"></i>
         </button>
         <div class="acordeon-body">
@@ -1320,7 +1336,7 @@
       <!-- SECCIÓN 7: GRADUACIÓN Y RX FINAL -->
       <div class="clinica-acordeon">
         <button type="button" class="acordeon-header" onclick="toggleAcordeon(this)">
-          <span>📋 Graduación de Lentes Anteriores y RX Final</span>
+          <span><i data-feather="clipboard"></i> Graduación de Lentes Anteriores y RX Final</span>
           <i data-feather="chevron-down" class="acordeon-icon"></i>
         </button>
         <div class="acordeon-body">
@@ -1343,7 +1359,7 @@
       <!-- SECCIÓN 8: DIAGNÓSTICO Y OBSERVACIONES -->
       <div class="clinica-acordeon">
         <button type="button" class="acordeon-header" onclick="toggleAcordeon(this)">
-          <span>📝 Diagnóstico y Observaciones</span>
+          <span><i data-feather="edit-3"></i> Diagnóstico y Observaciones</span>
           <i data-feather="chevron-down" class="acordeon-icon"></i>
         </button>
         <div class="acordeon-body">
@@ -1554,7 +1570,7 @@
               </div>
             </div>
             <div class="img-upload-actions" id="img-upload-actions">
-              <button type="button" class="btn-sm" style="color:var(--rojo);border-color:var(--rojo)" onclick="quitarImagenProducto()">✕ Quitar imagen</button>
+              <button type="button" class="btn-sm" style="color:var(--rojo);border-color:var(--rojo)" onclick="quitarImagenProducto()"><i data-feather="trash-2"></i> Quitar imagen</button>
             </div>
             <input type="file" id="producto-imagen-input" accept="image/*" style="display:none" onchange="handleImagenProducto(this)" />
             <input type="hidden" id="producto-imagen-url" />
@@ -1631,9 +1647,9 @@
       <div class="form-group">
         <label for="ajuste-tipo">Tipo de Ajuste</label>
         <select id="ajuste-tipo">
-          <option value="entrada">➕ Entrada (recibí mercancía)</option>
-          <option value="salida">➖ Salida (venta / baja)</option>
-          <option value="ajuste">🔄 Ajuste de conteo</option>
+          <option value="entrada">Entrada (recibí mercancía)</option>
+          <option value="salida">Salida (venta / baja)</option>
+          <option value="ajuste">Ajuste de conteo</option>
         </select>
       </div>
       <div class="form-group">
@@ -1719,15 +1735,33 @@
         </p>
         <div class="form-group">
           <label for="cambiar-pass-actual">Contraseña actual</label>
-          <input type="password" id="cambiar-pass-actual" required autocomplete="current-password" />
+          <div class="input-icon-wrap">
+            <i data-feather="lock" class="input-icon"></i>
+            <input type="password" id="cambiar-pass-actual" required autocomplete="current-password" />
+            <button type="button" class="toggle-pass" onclick="togglePassword('cambiar-pass-actual','eye-pass-actual')">
+              <i data-feather="eye" id="eye-pass-actual"></i>
+            </button>
+          </div>
         </div>
         <div class="form-group">
           <label for="cambiar-pass-nueva">Nueva contraseña</label>
-          <input type="password" id="cambiar-pass-nueva" required minlength="8" autocomplete="new-password" />
+          <div class="input-icon-wrap">
+            <i data-feather="lock" class="input-icon"></i>
+            <input type="password" id="cambiar-pass-nueva" required minlength="8" autocomplete="new-password" />
+            <button type="button" class="toggle-pass" onclick="togglePassword('cambiar-pass-nueva','eye-pass-nueva')">
+              <i data-feather="eye" id="eye-pass-nueva"></i>
+            </button>
+          </div>
         </div>
         <div class="form-group">
           <label for="cambiar-pass-confirmar">Confirmar nueva contraseña</label>
-          <input type="password" id="cambiar-pass-confirmar" required minlength="8" autocomplete="new-password" />
+          <div class="input-icon-wrap">
+            <i data-feather="lock" class="input-icon"></i>
+            <input type="password" id="cambiar-pass-confirmar" required minlength="8" autocomplete="new-password" />
+            <button type="button" class="toggle-pass" onclick="togglePassword('cambiar-pass-confirmar','eye-pass-confirmar')">
+              <i data-feather="eye" id="eye-pass-confirmar"></i>
+            </button>
+          </div>
         </div>
         <p id="cambiar-pass-error" class="login-error hidden" role="alert" style="position:static;">
           <i data-feather="alert-circle"></i>

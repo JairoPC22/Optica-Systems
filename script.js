@@ -1,7 +1,7 @@
 'use strict';
 
 /* ══════════════════════════════════════════════════════════════
-   ⚙️  CONFIGURACIÓN GLOBAL
+    CONFIGURACIÓN GLOBAL
 ══════════════════════════════════════════════════════════════ */
 
 const CONFIG = {
@@ -36,7 +36,7 @@ const CONFIG = {
  * botones siempre combinen.
  */
 const PALETA = {
-  azulOscuro:     '#1F3A5F',
+  azulOscuro:     '#241C14', // tinta cálida — ver --azul-oscuro en styles.css
   azulMedio:      '#2E5C8A',
   azulClaro:      '#6FA9C9',
   turquesa:       '#4FC3C7',
@@ -47,8 +47,13 @@ const PALETA = {
   rojoTexto:      '#C62828',
   amarillo:       '#FBC02D',
   amarilloTexto:  '#8a6d00',
-  grisLabel:      '#64758C',
-  blanco:         '#FFFFFF',
+  // Dorado — mismo acento estratégico que botones/indicadores: se usa para
+  // resaltar el dato más relevante de cada gráfica (la barra/punto actual),
+  // dejando azul/turquesa como series base.
+  dorado:         '#a67c00',
+  doradoLuz:      '#F3C765',
+  grisLabel:      '#7D6F58',
+  blanco:         '#FFFDF8',
 };
 
 /* ══════════════════════════════════════════════════════════════
@@ -165,15 +170,17 @@ function actualizarIndicadorOffline() {
   if (!el) return;
 
   if (!online) {
-    el.innerHTML   = '⚡ Sin conexión' + (pendientes ? ` · ${pendientes} en cola` : '');
+    el.innerHTML   = '<i data-feather="wifi-off"></i> Sin conexión' + (pendientes ? ` · ${pendientes} en cola` : '');
     el.className   = 'offline-badge offline-badge-warn';
     el.onclick     = null;
     el.style.display = '';
+    feather.replace();
   } else if (pendientes > 0) {
-    el.innerHTML   = `🔄 ${pendientes} pendiente${pendientes > 1 ? 's' : ''} — toca para sincronizar`;
+    el.innerHTML   = `<i data-feather="refresh-cw"></i> ${pendientes} pendiente${pendientes > 1 ? 's' : ''} — toca para sincronizar`;
     el.className   = 'offline-badge offline-badge-sync';
     el.onclick     = () => sincronizarCola();
     el.style.display = '';
+    feather.replace();
   } else {
     el.style.display = 'none';
     el.onclick = null;
@@ -214,7 +221,7 @@ async function sincronizarCola() {
   actualizarIndicadorOffline();
 
   if (ok > 0) {
-    showToast(`✓ ${ok} cambio${ok > 1 ? 's' : ''} guardado${ok > 1 ? 's' : ''} en Google Sheets`, 'success', 5000);
+    showToast(`${ok} cambio${ok > 1 ? 's' : ''} guardado${ok > 1 ? 's' : ''} en Google Sheets`, 'success', 5000);
     await Promise.allSettled([
       cargarClientes(), cargarVentas(), cargarPagos(),
       cargarHistorial(), cargarAuditoria(), cargarInventario(),
@@ -226,7 +233,7 @@ async function sincronizarCola() {
     feather.replace();
   }
   if (fail > 0) {
-    showToast(`⚠️ ${fail} cambio${fail > 1 ? 's' : ''} sin sincronizar — se reintentará al reconectar`, 'warning', 6000);
+    showToast(`${fail} cambio${fail > 1 ? 's' : ''} sin sincronizar — se reintentará al reconectar`, 'warning', 6000);
   }
 }
 
@@ -326,12 +333,19 @@ function setFechasHoy() {
 }
 
 function actualizarFechaTopbar() {
-  const el = document.getElementById('topbar-date');
-  if (!el) return;
   const ahora = new Date();
-  el.textContent = ahora.toLocaleDateString('es-MX', {
-    weekday: 'short', day: '2-digit', month: 'short', year: 'numeric'
-  });
+  const el = document.getElementById('topbar-date');
+  if (el) {
+    el.textContent = ahora.toLocaleDateString('es-MX', {
+      weekday: 'short', day: '2-digit', month: 'short', year: 'numeric'
+    });
+  }
+  const elHero = document.getElementById('dash-hero-fecha');
+  if (elHero) {
+    elHero.textContent = ahora.toLocaleDateString('es-MX', {
+      weekday: 'long', day: '2-digit', month: 'long'
+    });
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -508,16 +522,29 @@ function handleLogout() {
 
 let _cambioPasswordObligatorio = false;
 
+/** Vuelve a ocultar los 3 campos de contraseña del modal (por si quedaron visibles de un uso anterior). */
+function _ocultarCamposPassword() {
+  [['cambiar-pass-actual', 'eye-pass-actual'], ['cambiar-pass-nueva', 'eye-pass-nueva'], ['cambiar-pass-confirmar', 'eye-pass-confirmar']]
+    .forEach(([inputId, iconId]) => {
+      const input = document.getElementById(inputId);
+      const icon  = document.getElementById(iconId);
+      if (input) input.type = 'password';
+      if (icon)  icon.setAttribute('data-feather', 'eye');
+    });
+}
+
 /** Se muestra cuando el servidor indica que la contraseña actual es temporal. */
 function abrirCambioPasswordObligatorio() {
   _cambioPasswordObligatorio = true;
   document.getElementById('cambiar-pass-actual').value = '';
   document.getElementById('cambiar-pass-nueva').value = '';
   document.getElementById('cambiar-pass-confirmar').value = '';
+  _ocultarCamposPassword();
   document.getElementById('cambiar-pass-error').classList.add('hidden');
   document.getElementById('cambiar-pass-obligatorio-aviso').classList.remove('hidden');
   document.getElementById('cambiar-pass-cerrar').classList.add('hidden');
   openModal('modal-cambiar-password');
+  feather.replace();
 }
 
 /** Cambio de contraseña voluntario, disponible desde el menú de usuario. */
@@ -526,10 +553,12 @@ function abrirCambioPassword() {
   document.getElementById('cambiar-pass-actual').value = '';
   document.getElementById('cambiar-pass-nueva').value = '';
   document.getElementById('cambiar-pass-confirmar').value = '';
+  _ocultarCamposPassword();
   document.getElementById('cambiar-pass-error').classList.add('hidden');
   document.getElementById('cambiar-pass-obligatorio-aviso').classList.add('hidden');
   document.getElementById('cambiar-pass-cerrar').classList.remove('hidden');
   openModal('modal-cambiar-password');
+  feather.replace();
 }
 
 async function handleCambiarPassword(e) {
@@ -593,9 +622,10 @@ async function handleCambiarPassword(e) {
   }
 }
 
-function togglePassword() {
-  const input = document.getElementById('login-pass');
-  const icon  = document.getElementById('pass-eye');
+function togglePassword(inputId = 'login-pass', iconId = 'pass-eye') {
+  const input = document.getElementById(inputId);
+  const icon  = document.getElementById(iconId);
+  if (!input || !icon) return;
   if (input.type === 'password') {
     input.type = 'text';
     icon.setAttribute('data-feather', 'eye-off');
@@ -681,6 +711,7 @@ function renderUsuarioUI() {
   setHTML('sidebar-avatar', initials);
   setHTML('topbar-avatar', initials);
   setText('topbar-username', u.nombre.split(' ')[0]);
+  setText('dash-hero-saludo', `Bienvenido de nuevo, ${u.nombre.split(' ')[0]}`);
 
   const esAdmin = ['admin', 'administrador'].includes((u.rol || '').toLowerCase());
 
@@ -1299,7 +1330,7 @@ function renderClientes(lista = STATE.clientes) {
       <td data-label="Nombre"><strong>${esc(c.nombre)}</strong></td>
       <td data-label="Teléfono" class="mono">
   ${c.telefono
-    ? `<a href="https://wa.me/52${sanitizarTelefono(c.telefono)}" target="_blank" style="color:var(--verde);text-decoration:none;">📱 ${esc(c.telefono)}</a>`
+    ? `<a href="https://wa.me/52${sanitizarTelefono(c.telefono)}" target="_blank" style="color:var(--verde);text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>${esc(c.telefono)}</a>`
     : '—'
   }
 </td>
@@ -2117,7 +2148,7 @@ function calcularRestante() {
   const exceso = baseCalculo > total && total > 0;
 const restante = Math.max(0, Math.round((total - baseCalculo) * 100) / 100);
 const restanteInput = document.getElementById('venta-restante');
-restanteInput.value = exceso ? `⚠️ Exceso: ${formatMoney(baseCalculo - total)}` : formatMoney(restante);
+restanteInput.value = exceso ? `Exceso: ${formatMoney(baseCalculo - total)}` : formatMoney(restante);
 restanteInput.style.color = exceso ? 'var(--rojo)' : '';
 }
 function handleTipoVenta() {
@@ -2472,8 +2503,8 @@ if (idx > -1) STATE.ventas[idx] = { ...STATE.ventas[idx], ...data };
             await apiPost(CONFIG.HOJAS.INVENTARIO, 'update', { ...prod, stock: nuevoStock });
             STATE.inventario[idxNuevo].stock = nuevoStock;
             filterInventario();
-            if (nuevoStock === 0) showToast(`⚠️ ${prod.nombre} se quedó sin stock`, 'warning', 5000);
-            else if (nuevoStock <= parseInt(prod.stockMin || 3)) showToast(`⚠️ Stock bajo: ${prod.nombre} (${nuevoStock})`, 'warning', 4000);
+            if (nuevoStock === 0) showToast(`${prod.nombre} se quedó sin stock`, 'warning', 5000);
+            else if (nuevoStock <= parseInt(prod.stockMin || 3)) showToast(`Stock bajo: ${prod.nombre} (${nuevoStock})`, 'warning', 4000);
           }
         }
       }
@@ -2515,9 +2546,9 @@ if (idx > -1) STATE.ventas[idx] = { ...STATE.ventas[idx], ...data };
             badgeStockEl.style.display = alertasGlobal > 0 ? '' : 'none';
           }
           if (nuevoStock === 0)
-            showToast(`⚠️ ${prod.nombre} se quedó sin stock`, 'warning', 5000);
+            showToast(`${prod.nombre} se quedó sin stock`, 'warning', 5000);
           else if (nuevoStock <= parseInt(prod.stockMin || 3))
-            showToast(`⚠️ Stock bajo: ${prod.nombre} (${nuevoStock} unidades)`, 'warning', 4000);
+            showToast(`Stock bajo: ${prod.nombre} (${nuevoStock} unidades)`, 'warning', 4000);
         }
       }
 
@@ -2526,7 +2557,7 @@ if (idx > -1) STATE.ventas[idx] = { ...STATE.ventas[idx], ...data };
       showToast('Venta registrada correctamente', 'success');
       if (tipo === 'cambio') {
         showToast(
-          '↩️ Recuerda: el artículo devuelto NO se repuso al inventario automáticamente. Ve a Inventario → Ajustar Stock para corregirlo.',
+          'Recuerda: el artículo devuelto NO se repuso al inventario automáticamente. Ve a Inventario → Ajustar Stock para corregirlo.',
           'warning', 8000
         );
       }
@@ -2587,7 +2618,7 @@ function editarVenta(id) {
     if (!existeEnSelect) {
       const opt = document.createElement('option');
       opt.value = v.productoId;
-      opt.textContent = `⚠️ Producto original (sin stock / eliminado)`;
+      opt.textContent = `Producto original (sin stock / eliminado)`;
       opt.dataset.stock  = '0';
       opt.dataset.precio = v.precio || '';
       selectProd.appendChild(opt);
@@ -2763,10 +2794,10 @@ if (Math.round(monto * 100) > Math.round(saldoActual * 100)) {
     if (saldado) {
       if (cliente?.email) {
         sendCorreoAgradecimiento(cliente, totalVentaF)
-          .then(() => showToast(`¡Cuenta saldada! Correo enviado a ${cliente.nombre.split(' ')[0]} 🎉`, 'success', 4000))
+          .then(() => showToast(`¡Cuenta saldada! Correo enviado a ${cliente.nombre.split(' ')[0]}`, 'success', 4000))
           .catch(() => showToast(`¡Cuenta de ${cliente.nombre.split(' ')[0]} saldada! (No se pudo enviar correo)`, 'warning', 4000));
       } else {
-        showToast(`¡Cuenta de ${cliente.nombre.split(' ')[0]} completamente saldada! 🎉`, 'success', 4000);
+        showToast(`¡Cuenta de ${cliente.nombre.split(' ')[0]} completamente saldada!`, 'success', 4000);
       }
     }
   } catch (err) {
@@ -2892,7 +2923,7 @@ function abrirPagoVenta(ventaId) {
     return;
   }
   if (saldo === 0) {
-    showToast('Esta venta ya está completamente pagada ✓', 'info');
+    showToast('Esta venta ya está completamente pagada', 'info');
     return;
   }
 openModal('modal-pago');
@@ -2928,7 +2959,7 @@ function loadVentasDeCliente(preseleccionarVentaId = null) {
   let optsHTML = '<option value="">— Seleccionar venta —</option>';
 
   if (ventasPendientes.length) {
-    optsHTML += '<optgroup label="⚠️ Con saldo pendiente">';
+    optsHTML += '<optgroup label="Con saldo pendiente">';
     optsHTML += ventasPendientes.map(v =>
       `<option value="${v.id}">
         ${esc(v.tipoLente || 'Venta')} · ${formatMoney(v.totalFinal)}
@@ -2940,10 +2971,10 @@ function loadVentasDeCliente(preseleccionarVentaId = null) {
   }
 
   if (ventasCompletas.length) {
-    optsHTML += '<optgroup label="✅ Ya pagadas (no seleccionables)">';
+    optsHTML += '<optgroup label="Ya pagadas (no seleccionables)">';
     optsHTML += ventasCompletas.map(v =>
       `<option value="${v.id}" disabled style="color:#aaa;">
-        ${esc(v.tipoLente || 'Venta')} · ${formatMoney(v.totalFinal)} — Pagada ✓
+        ${esc(v.tipoLente || 'Venta')} · ${formatMoney(v.totalFinal)} — Pagada
       </option>`
     ).join('');
     optsHTML += '</optgroup>';
@@ -2952,7 +2983,7 @@ function loadVentasDeCliente(preseleccionarVentaId = null) {
 if (!ventasPendientes.length && !ventasCompletas.length) {
   optsHTML += '<option disabled>— Este cliente no tiene ventas registradas —</option>';
 } else if (!ventasPendientes.length) {
-  optsHTML += '<option disabled>— Todas las ventas de este cliente están pagadas ✓ —</option>';
+  optsHTML += '<option disabled>— Todas las ventas de este cliente están pagadas —</option>';
 }
 
   select.innerHTML = optsHTML;
@@ -3099,7 +3130,7 @@ const empDash = STATE._filtroEmpleadoDash;
   const dashBody = document.getElementById('dash-adeudos-body');
   if (dashBody) {
 if (!conSaldo.length) {
-      dashBody.innerHTML = '<tr><td colspan="4" class="empty-row">¡Sin adeudos pendientes! 🎉</td></tr>';
+      dashBody.innerHTML = '<tr><td colspan="4" class="empty-row">¡Sin adeudos pendientes!</td></tr>';
     } else {
       dashBody.innerHTML = conSaldo.map(v => `
         <tr>
@@ -3318,7 +3349,7 @@ async function sendRecordatorio() {
       contacto:     'WhatsApp: (282) 129-2915',
     });
     await registrarAuditoria('Pago', `${STATE.usuario.nombre} envió recordatorio de pago a ${c.nombre}`);
-    setEmailStatus('✓ Recordatorio enviado correctamente', 'success');
+    setEmailStatus('Recordatorio enviado correctamente', 'success');
     showToast('Correo de recordatorio enviado', 'success');
   } catch (err) {
     console.error(err);
@@ -3339,7 +3370,7 @@ async function sendAgradecimiento() {
   setEmailStatus('Enviando correo...', '');
   try {
     await sendCorreoAgradecimiento(c, total);
-    setEmailStatus('✓ Correo de agradecimiento enviado', 'success');
+    setEmailStatus('Correo de agradecimiento enviado', 'success');
   } catch {
     setEmailStatus('Error al enviar correo.', 'error');
   }
@@ -3373,9 +3404,11 @@ function abrirCorreoAdeudo(clienteId) {
 function setEmailStatus(msg, tipo) {
   const el = document.getElementById('email-status');
   if (!el) return;
-  el.textContent = msg;
+  const icono = tipo === 'success' ? 'check-circle' : tipo === 'error' ? 'x-circle' : null;
+  el.innerHTML = icono ? `<i data-feather="${icono}"></i> ${esc(msg)}` : esc(msg);
   el.className = `email-status ${tipo}`;
   el.classList.remove('hidden');
+  feather.replace();
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -3453,11 +3486,11 @@ function llenarSelectProductos() {
   let opts = '<option value="">— Seleccionar producto (opcional) —</option>';
 
   if (disponibles.length) {
-    opts += '<optgroup label="✅ Disponibles">';
+    opts += '<optgroup label="Disponibles">';
     opts += disponibles.map(p => {
       const stock = parseInt(p.stock || 0);
       const stockMin = parseInt(p.stockMin || 3);
-      const alerta = stock <= stockMin ? '⚠️ ' : '';
+      const alerta = stock <= stockMin ? '(bajo) ' : '';
       return `<option value="${p.id}"
         data-nombre="${esc(p.nombre)}"
         data-stock="${stock}"
@@ -3470,7 +3503,7 @@ function llenarSelectProductos() {
   }
 
   if (agotados.length) {
-    opts += '<optgroup label="❌ Sin stock (solo para editar ventas existentes)">';
+    opts += '<optgroup label="Sin stock (solo para editar ventas existentes)">';
     opts += agotados.map(p =>
       `<option value="${p.id}" data-nombre="${esc(p.nombre)}" data-stock="0" data-precio="${p.precioVenta || ''}" style="color:#aaa;">
         ${esc(p.nombre)}${p.marca ? ' · ' + esc(p.marca) : ''} — Agotado
@@ -3512,10 +3545,10 @@ function onProductoChange() {
   if (display) {
     const color  = stock === 0 ? '#E53935' : stock <= 3 ? '#FBC02D' : '#4CAF50';
     const texto  = stock === 0
-      ? '❌ Sin stock disponible'
+      ? 'Sin stock disponible'
       : stock <= 3
-        ? `⚠️ Stock bajo: ${stock} unidad${stock !== 1 ? 'es' : ''}`
-        : `✅ Stock disponible: ${stock} unidad${stock !== 1 ? 'es' : ''}`;
+        ? `Stock bajo: ${stock} unidad${stock !== 1 ? 'es' : ''}`
+        : `Stock disponible: ${stock} unidad${stock !== 1 ? 'es' : ''}`;
 
     display.innerHTML = `<span style="
       display:inline-block;background:${color};color:#fff;
@@ -3526,7 +3559,7 @@ function onProductoChange() {
 
   // Advertir si stock es 0
   if (stock === 0) {
-    showToast('⚠️ Este producto no tiene stock disponible', 'warning');
+    showToast('Este producto no tiene stock disponible', 'warning');
   }
 }
 function llenarSelectsClientes() {
@@ -3584,7 +3617,7 @@ function llenarSelectEmpleados() {
   const esAdmin = ['admin', 'administrador'].includes((STATE.usuario?.rol || '').toLowerCase());
   if (!esAdmin) return;
   const empleados = [...new Set(STATE.ventas.map(v => v.registradoPor).filter(Boolean))].sort();
-  const opts = '<option value="">👤 Todos los empleados</option>' +
+  const opts = '<option value="">Todos los empleados</option>' +
     empleados.map(e => `<option value="${esc(e)}">${esc(e)}</option>`).join('');
   ['filter-empleado-ventas', 'filter-empleado-dash'].forEach(id => {
     const el = document.getElementById(id);
@@ -3610,7 +3643,7 @@ function agregarBuscadorCliente(selectId) {
   const input = document.createElement('input');
   input.type        = 'text';
   input.id          = 'buscar-' + selectId;
-  input.placeholder = '🔍 Buscar cliente...';
+  input.placeholder = 'Buscar cliente...';
   input.style.cssText = 'margin-bottom:.4rem;';
 
   input.addEventListener('input', () => {
@@ -3683,6 +3716,54 @@ function navigateTo(seccion) {
 
   feather.replace();
 }
+
+/** Buscador rápido de secciones en la topbar: sugiere mientras se escribe
+ *  y navega con Enter o clic en una sugerencia. Solo compara contra
+ *  SECTION_LABELS — no busca dentro de datos de clientes/ventas/etc. */
+function filtrarSugerenciasSeccion(texto) {
+  const cont = document.getElementById('topbar-buscar-sugerencias');
+  if (!cont) return;
+  const q = texto.trim().toLowerCase();
+  if (!q) { cont.classList.add('hidden'); cont.innerHTML = ''; return; }
+
+  const coincidencias = Object.entries(SECTION_LABELS)
+    .filter(([, label]) => label.toLowerCase().includes(q));
+
+  if (!coincidencias.length) {
+    cont.innerHTML = '<div class="topbar-buscar-vacio">Sin coincidencias</div>';
+    cont.classList.remove('hidden');
+    return;
+  }
+
+  cont.innerHTML = coincidencias.map(([key, label]) =>
+    `<button type="button" class="topbar-buscar-item" onmousedown="event.preventDefault();irASeccionBuscada('${esc(label)}')">${esc(label)}</button>`
+  ).join('');
+  cont.classList.remove('hidden');
+}
+
+/** Navega a la sección cuyo nombre (o parte de él) coincide con el texto escrito. */
+function irASeccionBuscada(texto) {
+  const q = texto.trim().toLowerCase();
+  const cont  = document.getElementById('topbar-buscar-sugerencias');
+  const input = document.getElementById('topbar-buscar-seccion');
+  if (!q) return;
+
+  const [key] = Object.entries(SECTION_LABELS).find(([, label]) => label.toLowerCase().includes(q)) || [];
+  if (!key) { showToast('No se encontró esa sección', 'warning'); return; }
+
+  navigateTo(key);
+  if (input) input.value = '';
+  if (cont) { cont.classList.add('hidden'); cont.innerHTML = ''; }
+}
+
+// Cierra las sugerencias al hacer clic fuera del buscador de la topbar.
+document.addEventListener('click', (e) => {
+  const wrap = document.querySelector('.topbar-search');
+  if (wrap && !wrap.contains(e.target)) {
+    const cont = document.getElementById('topbar-buscar-sugerencias');
+    if (cont) cont.classList.add('hidden');
+  }
+});
 
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
@@ -4024,13 +4105,13 @@ tbody.innerHTML = lista.map(v => {
         <td data-label="Cliente"><strong>${esc(v._cliente?.nombre || v.clienteNombre || '—')}</strong></td>
         <td data-label="Teléfono" class="mono">
         ${v._cliente?.telefono
-            ? `<a href="https://wa.me/52${sanitizarTelefono(v._cliente.telefono)}" target="_blank" style="color:var(--verde);text-decoration:none;">📱 ${esc(v._cliente.telefono)}</a>`
+            ? `<a href="https://wa.me/52${sanitizarTelefono(v._cliente.telefono)}" target="_blank" style="color:var(--verde);text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>${esc(v._cliente.telefono)}</a>`
             : '—'
         }
         </td>        
         <td data-label="Total" class="mono">${formatMoney(v.totalFinal)}</td>
         <td data-label="Pagado" class="mono text-green">${formatMoney(v._pagado)}</td>
-        <td data-label="Saldo" class="mono ${esExceso ? 'text-green' : saldo > 0 ? 'text-red fw-bold' : 'text-green'}">${esExceso ? '⬆️ Exceso: ' + formatMoney(saldoDisplay) : formatMoney(saldoDisplay)}</td>        <td data-label="Último Pago" class="mono">${ultimoPago ? esc(ultimoPago.fecha) : '—'}</td>
+        <td data-label="Saldo" class="mono ${esExceso ? 'text-green' : saldo > 0 ? 'text-red fw-bold' : 'text-green'}">${esExceso ? 'Exceso: ' + formatMoney(saldoDisplay) : formatMoney(saldoDisplay)}</td>        <td data-label="Último Pago" class="mono">${ultimoPago ? esc(ultimoPago.fecha) : '—'}</td>
         <td>
           <div class="action-btns">
             <button class="btn-action pay"   onclick="abrirPagoVenta('${v.id}')" title="Registrar pago"><i data-feather="dollar-sign"></i></button>
@@ -4054,9 +4135,9 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
     ? `<tr><td class="lbl">${label}</td><td class="val">${esc(String(valor))}</td></tr>`
     : '';
 
-  const seccion = (icono, titulo, contenido) => `
+  const seccion = (_icono, titulo, contenido) => `
     <div class="seccion">
-      <div class="seccion-titulo"><span class="sec-icon">${icono}</span>${titulo}</div>
+      <div class="seccion-titulo">${titulo}</div>
       <div class="seccion-body">${contenido}</div>
     </div>`;
 
@@ -4072,13 +4153,13 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:'Inter',Arial,sans-serif;font-size:12px;color:#1a2b45;background:#e8edf3;padding:24px;}
+    body{font-family:'Inter',Arial,sans-serif;font-size:12px;color:#241C14;background:#F2E9D6;padding:24px;}
 
     /* ── BOTÓN IMPRIMIR ── */
     .btn-print{
       display:flex;align-items:center;gap:.5rem;
       max-width:820px;margin:0 auto 16px;padding:10px 24px;
-      background:linear-gradient(135deg,#1F3A5F,#2E5C8A);
+      background:linear-gradient(135deg,#241C14,#2E5C8A);
       color:#fff;border:none;border-radius:10px;font-size:13px;
       font-weight:600;cursor:pointer;font-family:'Inter',Arial,sans-serif;
     }
@@ -4089,7 +4170,7 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
 
     /* ── HEADER PRINCIPAL ── */
     .header{
-      background:linear-gradient(135deg,#1F3A5F 0%,#2E5C8A 60%,#3a7aaa 100%);
+      background:linear-gradient(135deg,#241C14 0%,#2E5C8A 60%,#3a7aaa 100%);
       padding:0;
       position:relative;
       overflow:hidden;
@@ -4110,10 +4191,10 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
     }
     .header-left{display:flex;align-items:center;gap:14px;}
     .logo-img{width:54px;height:54px;border-radius:12px;background:rgba(255,255,255,.12);padding:4px;object-fit:contain;border:1.5px solid rgba(255,255,255,.2);}
-    .logo-text .optica{font-size:10px;font-weight:600;letter-spacing:.22em;color:#7EC8CB;display:block;}
+    .logo-text .optica{font-size:10px;font-weight:600;letter-spacing:.22em;color:#F3C765;display:block;}
     .logo-text .marca-nombre{font-size:24px;font-weight:800;color:#fff;letter-spacing:.04em;line-height:1.1;}
     .header-right{text-align:right;}
-    .doc-tipo{font-size:10px;font-weight:700;letter-spacing:.18em;color:#7EC8CB;text-transform:uppercase;}
+    .doc-tipo{font-size:10px;font-weight:700;letter-spacing:.18em;color:#F3C765;text-transform:uppercase;}
     .doc-num{font-size:11px;color:rgba(255,255,255,.5);margin-top:3px;font-weight:400;}
 
     /* ── FRANJA TURQUESA ── */
@@ -4121,24 +4202,24 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
 
     /* ── BANNER PACIENTE ── */
     .banner{
-      background:linear-gradient(to right,#f0f6fb,#e8f4f8);
-      border-bottom:2px solid #dde9f0;
+      background:linear-gradient(to right,#FBF3E3,#F5EBD5);
+      border-bottom:2px solid #E7DCC5;
       padding:20px 32px;
       display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
     }
     .banner-left{}
     .banner-label{font-size:9px;font-weight:700;letter-spacing:.18em;color:#6FA9C9;text-transform:uppercase;margin-bottom:4px;}
-    .banner-nombre{font-size:22px;font-weight:800;color:#1F3A5F;letter-spacing:-.01em;}
+    .banner-nombre{font-size:22px;font-weight:800;color:#241C14;letter-spacing:-.01em;}
     .banner-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
     .chip{
-      background:#fff;border:1.5px solid #c8d8e8;border-radius:99px;
+      background:#fff;border:1.5px solid #E2C98A;border-radius:99px;
       padding:4px 12px;font-size:11px;font-weight:500;color:#2E5C8A;
       display:flex;align-items:center;gap:4px;box-shadow:0 1px 3px rgba(0,0,0,.06);
     }
-    .chip-lbl{color:#8A9BB0;font-weight:400;}
+    .chip-lbl{color:#7D6F58;font-weight:400;}
     .banner-fecha{text-align:right;}
     .fecha-label{font-size:9px;font-weight:700;letter-spacing:.18em;color:#6FA9C9;text-transform:uppercase;}
-    .fecha-val{font-size:15px;font-weight:700;color:#1F3A5F;margin-top:2px;}
+    .fecha-val{font-size:15px;font-weight:700;color:#241C14;margin-top:2px;}
 
     /* ── CUERPO ── */
     .cuerpo{padding:24px 32px;flex:1;}
@@ -4148,7 +4229,7 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
     .seccion-titulo{
       display:flex;align-items:center;gap:8px;
       font-size:9.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
-      color:#1F3A5F;background:linear-gradient(to right,#EBF4F8,#f4f8fb);
+      color:#241C14;background:linear-gradient(to right,#FBF3E3,#FBF6EC);
       border-left:3.5px solid #4FC3C7;padding:7px 14px;
       border-radius:0 8px 8px 0;margin-bottom:10px;
     }
@@ -4158,26 +4239,26 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
     /* ── TABLA DATOS ── */
     table.datos{width:100%;border-collapse:collapse;font-size:11.5px;}
     table.datos td{padding:5px 8px;vertical-align:top;}
-    table.datos tr:nth-child(odd) td{background:#f8fafc;border-radius:4px;}
-    td.lbl{color:#8A9BB0;font-weight:600;width:38%;white-space:nowrap;font-size:11px;}
-    td.val{color:#1a2b45;font-weight:500;}
+    table.datos tr:nth-child(odd) td{background:#FBF6EC;border-radius:4px;}
+    td.lbl{color:#7D6F58;font-weight:600;width:38%;white-space:nowrap;font-size:11px;}
+    td.val{color:#241C14;font-weight:500;}
 
     /* ── TABLA AVD ── */
-    .av-wrap{overflow-x:auto;border-radius:10px;overflow:hidden;border:1.5px solid #dde6ef;}
+    .av-wrap{overflow-x:auto;border-radius:10px;overflow:hidden;border:1.5px solid #E7DCC5;}
     table.av{width:100%;border-collapse:collapse;font-size:11.5px;}
     table.av th{
-      background:linear-gradient(135deg,#1F3A5F,#2E5C8A);
+      background:linear-gradient(135deg,#241C14,#2E5C8A);
       color:#fff;font-weight:700;padding:8px 12px;
       text-align:center;font-size:10px;letter-spacing:.08em;
     }
     table.av th:first-child{text-align:left;width:70px;}
     table.av td{
-      border:1px solid #dde6ef;padding:7px 12px;text-align:center;
-      font-family:'Courier New',monospace;color:#1F3A5F;font-size:12px;
+      border:1px solid #E7DCC5;padding:7px 12px;text-align:center;
+      font-family:'Courier New',monospace;color:#241C14;font-size:12px;
     }
-    table.av tr:nth-child(even) td{background:#f4f7fb;}
+    table.av tr:nth-child(even) td{background:#F8F1E0;}
     table.av td:first-child{
-      background:#EBF4F8;font-weight:700;
+      background:#FBF3E3;font-weight:700;
       font-family:'Inter',Arial,sans-serif;font-size:11px;color:#2E5C8A;text-align:left;
     }
 
@@ -4187,11 +4268,11 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
 
     /* ── RX BOX ── */
     .rx-box{
-      background:linear-gradient(135deg,#1F3A5F,#2a4e7a);
+      background:linear-gradient(135deg,#241C14,#2a4e7a);
       border-radius:12px;padding:16px 18px;color:#fff;
       box-shadow:0 4px 16px rgba(31,58,95,.25);
     }
-    .rx-titulo{font-size:9px;font-weight:800;letter-spacing:.18em;color:#7EC8CB;margin-bottom:10px;text-transform:uppercase;}
+    .rx-titulo{font-size:9px;font-weight:800;letter-spacing:.18em;color:#F3C765;margin-bottom:10px;text-transform:uppercase;}
     .rx-box table{width:100%;font-size:12px;}
     .rx-box td{padding:4px 6px;color:rgba(255,255,255,.65);}
     .rx-box td:last-child{color:#fff;font-weight:700;text-align:right;font-family:'Courier New',monospace;font-size:13px;}
@@ -4199,8 +4280,8 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
     /* ── CHIPS SÍNTOMAS ── */
     .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
     .tag{
-      background:linear-gradient(135deg,#EBF4F8,#ddeef6);
-      border:1.5px solid #b8d4e8;color:#1F3A5F;
+      background:linear-gradient(135deg,#FBF3E3,#F0E5CC);
+      border:1.5px solid #D9BE7E;color:#241C14;
       border-radius:99px;padding:4px 12px;
       font-size:11px;font-weight:600;
     }
@@ -4215,7 +4296,7 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
       box-shadow:inset 0 1px 4px rgba(0,0,0,.04);
     }
     .obs-box{
-      background:#f8fafc;border:1.5px solid #dde6ef;border-radius:10px;
+      background:#FBF6EC;border:1.5px solid #E7DCC5;border-radius:10px;
       padding:14px 18px;font-size:12px;line-height:1.7;color:#3a4a5a;
     }
 
@@ -4223,18 +4304,18 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
     .medidas-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;}
     .medida-item{
       display:flex;justify-content:space-between;align-items:center;
-      background:#f4f7fb;border-radius:6px;padding:5px 10px;font-size:11.5px;
+      background:#F8F1E0;border-radius:6px;padding:5px 10px;font-size:11.5px;
     }
-    .medida-lbl{color:#8A9BB0;font-weight:600;font-size:10.5px;}
-    .medida-val{color:#1F3A5F;font-weight:700;font-family:'Courier New',monospace;}
+    .medida-lbl{color:#7D6F58;font-weight:600;font-size:10.5px;}
+    .medida-val{color:#241C14;font-weight:700;font-family:'Courier New',monospace;}
 
     /* ── DIVIDER ── */
-    .divider{height:1px;background:linear-gradient(to right,transparent,#dde6ef,transparent);margin:4px 0 18px;}
+    .divider{height:1px;background:linear-gradient(to right,transparent,#E7DCC5,transparent);margin:4px 0 18px;}
 
     /* ── FOOTER ── */
 .footer{
-      background:linear-gradient(to right,#f0f6fb,#e8f4f8);
-      border-top:2px solid #dde9f0;
+      background:linear-gradient(to right,#FBF3E3,#F5EBD5);
+      border-top:2px solid #E7DCC5;
       padding:20px 32px;
       display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;
       margin-top:auto;
@@ -4242,17 +4323,17 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
     .footer-brand{display:flex;align-items:center;gap:10px;}
     .footer-logo{width:32px;height:32px;border-radius:7px;object-fit:contain;background:rgba(31,58,95,.08);padding:3px;}
     .footer-info{}
-    .footer-nombre{font-size:12px;font-weight:700;color:#1F3A5F;}
-    .footer-sub{font-size:10px;color:#8A9BB0;margin-top:1px;}
+    .footer-nombre{font-size:12px;font-weight:700;color:#241C14;}
+    .footer-sub{font-size:10px;color:#7D6F58;margin-top:1px;}
     .firma-bloque{text-align:center;}
     .firma-linea{
       width:200px;height:1.5px;
       background:linear-gradient(to right,transparent,#2E5C8A,transparent);
       margin:0 auto 6px;
     }
-    .firma-nombre{font-size:12px;font-weight:700;color:#1F3A5F;}
+    .firma-nombre{font-size:12px;font-weight:700;color:#241C14;}
     .firma-titulo{font-size:10px;color:#6FA9C9;font-weight:600;letter-spacing:.06em;margin-top:2px;}
-    .firma-ced{font-size:9.5px;color:#8A9BB0;margin-top:1px;}
+    .firma-ced{font-size:9.5px;color:#7D6F58;margin-top:1px;}
 
     /* ── WATERMARK STRIP ── */
     .footer-anchor{}
@@ -4294,7 +4375,7 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
 </head>
 <body>
 
-<button class="btn-print" onclick="window.print()">🖨️&nbsp; Imprimir Expediente</button>
+<button class="btn-print" onclick="window.print()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:4px;"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Imprimir Expediente</button>
 
 <div class="pagina">
   <div class="wm-strip"></div>
@@ -4338,7 +4419,7 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
   <div class="cuerpo">
 
     <!-- AGUDEZA VISUAL -->
-    ${seccion('👁️', 'Agudeza Visual', `
+    ${seccion('', 'Agudeza Visual', `
       <div class="av-wrap">
         <table class="av">
           <thead><tr>
@@ -4366,7 +4447,7 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
     <!-- RX FINAL + MEDIDAS -->
     <div class="grid2" style="margin-bottom:18px;">
       <div class="rx-box">
-        <div class="rx-titulo">📋 RX Final</div>
+        <div class="rx-titulo">RX Final</div>
         <table>
           ${h.rxOd      ? `<tr><td>OD</td><td>${h.rxOd}</td></tr>`         : ''}
           ${h.rxOi      ? `<tr><td>OI</td><td>${h.rxOi}</td></tr>`         : ''}
@@ -4379,7 +4460,7 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
         </table>
       </div>
       <div>
-        <div class="seccion-titulo" style="margin-bottom:8px;"><span class="sec-icon">📐</span>Medidas Optométricas</div>
+        <div class="seccion-titulo" style="margin-bottom:8px;">Medidas Optométricas</div>
         <div class="medidas-grid">
           ${h.dip    ? `<div class="medida-item"><span class="medida-lbl">DIP</span><span class="medida-val">${h.dip} mm</span></div>` : ''}
           ${h.altura ? `<div class="medida-item"><span class="medida-lbl">Altura</span><span class="medida-val">${h.altura} mm</span></div>` : ''}
@@ -4401,7 +4482,7 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
     <div class="divider"></div>
 
     <!-- MOTIVO DE CONSULTA -->
-    ${(h.motivo || h.desdeCuando) ? seccion('💬', 'Motivo de Consulta', `
+    ${(h.motivo || h.desdeCuando) ? seccion('', 'Motivo de Consulta', `
       <table class="datos">
         ${fila('Motivo de visita', h.motivo)}
         ${fila('Desde cuándo', h.desdeCuando)}
@@ -4413,7 +4494,7 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
 
     <!-- ANTECEDENTES -->
     <div class="grid2">
-      ${(h.ultimoExamen || h.usaLentes) ? seccion('🔬', 'Antec. Refractométricos', `
+      ${(h.ultimoExamen || h.usaLentes) ? seccion('', 'Antec. Refractométricos', `
         <table class="datos">
           ${fila('Último examen', h.ultimoExamen)}
           ${fila('Usa lentes', h.usaLentes)}
@@ -4424,32 +4505,32 @@ const logoURL  = window.location.origin + window.location.pathname.replace(/[^/]
           ${fila('Cirugía ocular', h.cirugia)}
         </table>
       `) : ''}
-      ${antecedentes.length ? seccion('🧬', 'Antec. Heredofamiliares', `
+      ${antecedentes.length ? seccion('', 'Antec. Heredofamiliares', `
         <div class="tags">${antecedentes.map(a=>`<span class="tag antec">${a}</span>`).join('')}</div>
       `) : ''}
     </div>
 
     <!-- REVISIÓN DE ANEXOS -->
-    ${(h.parpados || h.conjuntiva) ? seccion('🔎', 'Revisión de Anexos', `
+    ${(h.parpados || h.conjuntiva) ? seccion('', 'Revisión de Anexos', `
       <table class="datos">
         ${fila('Párpados', h.parpados)}
         ${fila('Pestañas', h.pestanas)}
         ${fila('Cejas', h.cejas)}
         ${fila('Conjuntiva', h.conjuntiva)}
-        ${h.oftalmoscopia ? `<tr><td class="lbl" colspan="2" style="padding-top:8px;font-weight:700;color:#2E5C8A;">Oftalmoscopía / Retinoscopia</td></tr><tr><td colspan="2" class="val" style="background:#f0f6fb;padding:6px 8px;border-radius:6px;">${esc(h.oftalmoscopia)}</td></tr>` : ''}
+        ${h.oftalmoscopia ? `<tr><td class="lbl" colspan="2" style="padding-top:8px;font-weight:700;color:#2E5C8A;">Oftalmoscopía / Retinoscopia</td></tr><tr><td colspan="2" class="val" style="background:#FBF3E3;padding:6px 8px;border-radius:6px;">${esc(h.oftalmoscopia)}</td></tr>` : ''}
       </table>
     `) : ''}
 
     <div class="divider"></div>
 
     <!-- SÍNTOMAS -->
-    ${sintomas.length ? seccion('⚠️', 'Síntomas Reportados', `
+    ${sintomas.length ? seccion('', 'Síntomas Reportados', `
       <div class="tags">${sintomas.map(s=>`<span class="tag sint">${s}</span>`).join('')}</div>
     `) : ''}
 
     <!-- DIAGNÓSTICO Y OBSERVACIONES -->
-    ${h.diagnostico ? seccion('📝', 'Diagnóstico', `<div class="diag-box">${esc(h.diagnostico)}</div>`) : ''}
-    ${h.observaciones ? seccion('📌', 'Observaciones', `<div class="obs-box">${esc(h.observaciones)}</div>`) : ''}
+    ${h.diagnostico ? seccion('', 'Diagnóstico', `<div class="diag-box">${esc(h.diagnostico)}</div>`) : ''}
+    ${h.observaciones ? seccion('', 'Observaciones', `<div class="obs-box">${esc(h.observaciones)}</div>`) : ''}
 
   </div>
 
@@ -4661,12 +4742,12 @@ function renderGraficaInventario() {
         legend: { display: false },
         tooltip: {
           callbacks: { label: ctx => ` ${ctx.raw} unidad${ctx.raw === 1 ? '' : 'es'}` },
-          backgroundColor: '#1F3A5F', titleColor: '#7EC8CB', bodyColor: '#fff', cornerRadius: 8, padding: 12,
+          backgroundColor: '#241C14', titleColor: '#F3C765', bodyColor: '#fff', cornerRadius: 8, padding: 12,
         },
       },
       scales: {
-        x: { grid: { display: false }, ticks: { color: '#8A9BB0', font: { size: 11 } } },
-        y: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#8A9BB0', font: { size: 11 }, stepSize: 1, precision: 0 }, beginAtZero: true },
+        x: { grid: { display: false }, ticks: { color: '#7D6F58', font: { size: 11 } } },
+        y: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#7D6F58', font: { size: 11 }, stepSize: 1, precision: 0 }, beginAtZero: true },
       },
     },
   });
@@ -4823,11 +4904,11 @@ function _redibujarCharts(labels, datosIngresos, datosNumVentas, datosIngresosAn
         responsive: true, maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
-          tooltip: { callbacks: { label: ctx => ` ${formatMoney(ctx.raw)}` }, backgroundColor:'#1F3A5F', titleColor:'#7EC8CB', bodyColor:'#fff', cornerRadius:8, padding:12 }
+          tooltip: { callbacks: { label: ctx => ` ${formatMoney(ctx.raw)}` }, backgroundColor:'#241C14', titleColor:'#F3C765', bodyColor:'#fff', cornerRadius:8, padding:12 }
         },
         scales: {
-          x: { grid:{display:false}, ticks:{color:'#8A9BB0',font:{size:10}} },
-          y: { grid:{color:'rgba(0,0,0,0.04)'}, ticks:{color:'#8A9BB0',font:{size:10},callback:v=>v>=1000?'$'+(v/1000).toFixed(0)+'k':'$'+v}, beginAtZero:true }
+          x: { grid:{display:false}, ticks:{color:'#7D6F58',font:{size:10}} },
+          y: { grid:{color:'rgba(0,0,0,0.04)'}, ticks:{color:'#7D6F58',font:{size:10},callback:v=>v>=1000?'$'+(v/1000).toFixed(0)+'k':'$'+v}, beginAtZero:true }
         }
       }
     });
@@ -4882,8 +4963,8 @@ function _redibujarCharts(labels, datosIngresos, datosNumVentas, datosIngresosAn
       },
       options: {
         responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{display:false}, tooltip:{callbacks:{label:ctx=>` ${ctx.raw} venta${ctx.raw!==1?'s':''}`}, backgroundColor:'#1F3A5F',titleColor:'#7EC8CB',bodyColor:'#fff',cornerRadius:8,padding:12} },
-        scales:{ x:{grid:{display:false},ticks:{color:'#8A9BB0',font:{size:10}}}, y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#8A9BB0',font:{size:10},stepSize:1,precision:0},beginAtZero:true} }
+        plugins:{ legend:{display:false}, tooltip:{callbacks:{label:ctx=>` ${ctx.raw} venta${ctx.raw!==1?'s':''}`}, backgroundColor:'#241C14',titleColor:'#F3C765',bodyColor:'#fff',cornerRadius:8,padding:12} },
+        scales:{ x:{grid:{display:false},ticks:{color:'#7D6F58',font:{size:10}}}, y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#7D6F58',font:{size:10},stepSize:1,precision:0},beginAtZero:true} }
       }
     });
   }
@@ -5032,7 +5113,10 @@ function renderGraficas() {
   setHTML('m-tasa-cobro',       tasaCobro + '%');
 
   // ── Colores ──
-  const { azulMedio: azul, turquesa, verde, rojo, amarillo } = PALETA;
+  // El dorado resalta el dato más importante de la gráfica (el período
+  // actual/más reciente) — mismo criterio que en botones e indicadores:
+  // acento estratégico, no relleno general.
+  const { azulMedio: azul, turquesa, verde, rojo, amarillo, dorado, doradoLuz } = PALETA;
   const azulMedioFade = 'rgba(46,92,138,0.15)';
 
   // ── CHART 1: Ingresos con línea de período anterior ──
@@ -5060,10 +5144,10 @@ function renderGraficas() {
             label: 'Período actual',
             data: datosIngresos,
             backgroundColor: datosIngresos.map((v,i) =>
-              i === datosIngresos.length - 1 ? turquesa : azulMedioFade
+              i === datosIngresos.length - 1 ? doradoLuz : azulMedioFade
             ),
             borderColor: datosIngresos.map((v,i) =>
-              i === datosIngresos.length - 1 ? turquesa : azul
+              i === datosIngresos.length - 1 ? dorado : azul
             ),
             borderWidth: 1.5,
             borderRadius: 7,
@@ -5102,7 +5186,7 @@ function renderGraficas() {
               boxHeight: 10,
               borderRadius: 3,
               font: { size: 11, family: "'Sora', sans-serif" },
-              color: '#8A9BB0',
+              color: '#7D6F58',
               padding: 12,
             }
           },
@@ -5110,8 +5194,8 @@ function renderGraficas() {
             callbacks: {
               label: ctx => ` ${ctx.dataset.label}: ${formatMoney(ctx.raw)}`,
             },
-            backgroundColor: '#1F3A5F',
-            titleColor: '#7EC8CB',
+            backgroundColor: '#241C14',
+            titleColor: '#F3C765',
             bodyColor: '#fff',
             cornerRadius: 8,
             padding: 12,
@@ -5121,12 +5205,12 @@ function renderGraficas() {
         scales: {
           x: {
             grid: { display: false },
-            ticks: { color: '#8A9BB0', font: { size: 11 } },
+            ticks: { color: '#7D6F58', font: { size: 11 } },
           },
           y: {
             grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false },
             ticks: {
-              color: '#8A9BB0',
+              color: '#7D6F58',
               font: { size: 11 },
               callback: v => v >= 1000 ? '$' + (v/1000).toFixed(0) + 'k' : '$' + v,
             },
@@ -5168,8 +5252,8 @@ function renderGraficas() {
                 return ` ${ctx.label}: ${ctx.raw} (${pct}%)`;
               }
             },
-            backgroundColor: '#1F3A5F',
-            titleColor: '#7EC8CB',
+            backgroundColor: '#241C14',
+            titleColor: '#F3C765',
             bodyColor: '#fff',
             cornerRadius: 8,
             padding: 12,
@@ -5256,15 +5340,15 @@ function renderGraficas() {
             labels: {
               boxWidth: 10, boxHeight: 10, borderRadius: 3,
               font: { size: 11, family: "'Sora', sans-serif" },
-              color: '#8A9BB0', padding: 12,
+              color: '#7D6F58', padding: 12,
             }
           },
           tooltip: {
             callbacks: {
               label: ctx => ` ${ctx.dataset.label}: ${ctx.raw} venta${ctx.raw !== 1 ? 's' : ''}`,
             },
-            backgroundColor: '#1F3A5F',
-            titleColor: '#7EC8CB',
+            backgroundColor: '#241C14',
+            titleColor: '#F3C765',
             bodyColor: '#fff',
             cornerRadius: 8,
             padding: 12,
@@ -5274,12 +5358,12 @@ function renderGraficas() {
         scales: {
           x: {
             grid: { display: false },
-            ticks: { color: '#8A9BB0', font: { size: 11 } },
+            ticks: { color: '#7D6F58', font: { size: 11 } },
           },
           y: {
             grid: { color: 'rgba(0,0,0,0.04)' },
             ticks: {
-              color: '#8A9BB0', font: { size: 11 },
+              color: '#7D6F58', font: { size: 11 },
               stepSize: 1, precision: 0,
             },
             beginAtZero: true,
@@ -5381,7 +5465,7 @@ function actualizarGrafica3DSiVisible(nombre, _reintento) {
   if (!datosGrafica) return;
 
   const config = nombre === 'ventas'
-    ? ['Ingresos', PALETA.azulMedio, PALETA.turquesa, v => formatMoney(v)]
+    ? ['Ingresos', PALETA.azulMedio, PALETA.dorado, v => formatMoney(v)]
     : ['Unidades en stock', PALETA.turquesaOscuro, PALETA.amarillo, v => `${v} u.`];
   dibujarBarras3D_(contenedor, nombre, datosGrafica.labels, datosGrafica.datos, ...config);
 
@@ -5588,46 +5672,46 @@ function imprimirTicket(ventaId) {
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     body{font-family:'Inter',monospace;background:#f0f2f5;display:flex;flex-direction:column;align-items:center;padding:20px;min-height:100vh;}
-    .btn-print{background:linear-gradient(135deg,#1F3A5F,#2E5C8A);color:#fff;border:none;padding:10px 28px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:16px;font-family:'Inter',sans-serif;}
+    .btn-print{background:linear-gradient(135deg,#241C14,#2E5C8A);color:#fff;border:none;padding:10px 28px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:16px;font-family:'Inter',sans-serif;}
     .btn-print:hover{opacity:.9;}
     .ticket{background:#fff;width:320px;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);overflow:hidden;}
-    .t-header{background:linear-gradient(135deg,#1F3A5F,#2E5C8A);padding:20px 16px 16px;text-align:center;}
+    .t-header{background:linear-gradient(135deg,#241C14,#2E5C8A);padding:20px 16px 16px;text-align:center;}
     .t-logo{width:48px;height:48px;border-radius:10px;object-fit:contain;background:rgba(255,255,255,.12);padding:3px;margin-bottom:8px;}
-    .t-marca{font-size:10px;letter-spacing:.22em;color:#7EC8CB;font-weight:600;}
+    .t-marca{font-size:10px;letter-spacing:.22em;color:#F3C765;font-weight:600;}
     .t-nombre{font-size:20px;font-weight:800;color:#fff;letter-spacing:.04em;}
     .t-sub{font-size:10px;color:rgba(255,255,255,.5);margin-top:3px;}
     .t-accent{height:3px;background:linear-gradient(90deg,#4FC3C7,#38a8ac,#4FC3C7);}
-    .t-cliente{padding:14px 16px;border-bottom:1px dashed #e0e6ed;background:#f8fafc;}
-    .t-cliente-nombre{font-size:13px;font-weight:700;color:#1F3A5F;}
-    .t-cliente-tel{font-size:11px;color:#8A9BB0;margin-top:2px;}
+    .t-cliente{padding:14px 16px;border-bottom:1px dashed #E7DCC5;background:#FBF6EC;}
+    .t-cliente-nombre{font-size:13px;font-weight:700;color:#241C14;}
+    .t-cliente-tel{font-size:11px;color:#7D6F58;margin-top:2px;}
     .t-folio{display:flex;justify-content:space-between;align-items:center;margin-top:6px;}
     .t-folio-label{font-size:9px;font-weight:700;letter-spacing:.12em;color:#aab;text-transform:uppercase;}
     .t-folio-val{font-size:11px;font-family:monospace;color:#2E5C8A;font-weight:700;}
     .t-body{padding:14px 16px;}
-    .t-section-title{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#8A9BB0;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #eef;}
+    .t-section-title{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#7D6F58;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #eef;}
     .t-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;}
     .t-row .label{color:#5A6A7E;flex:1;}
-    .t-row .value{font-weight:600;color:#1F3A5F;font-family:monospace;}
-    .t-row.total{border-top:2px solid #1F3A5F;margin-top:8px;padding-top:8px;}
-    .t-row.total .label{font-weight:700;color:#1F3A5F;font-size:13px;}
-    .t-row.total .value{font-size:15px;font-weight:800;color:#1F3A5F;}
+    .t-row .value{font-weight:600;color:#241C14;font-family:monospace;}
+    .t-row.total{border-top:2px solid #241C14;margin-top:8px;padding-top:8px;}
+    .t-row.total .label{font-weight:700;color:#241C14;font-size:13px;}
+    .t-row.total .value{font-size:15px;font-weight:800;color:#241C14;}
     .t-row.pagado .value{color:#4CAF50;}
     .t-row.saldo .value{color:${saldo > 0 ? '#E53935' : '#4CAF50'};}
     .t-tipo{display:inline-block;padding:2px 10px;border-radius:99px;font-size:10px;font-weight:700;background:${v.tipo==='garantia'?'#E8F5E9':v.tipo==='cambio'?'#FFF8E1':'rgba(46,92,138,.1)'};color:${v.tipo==='garantia'?'#2e7d32':v.tipo==='cambio'?'#b8860b':'#2E5C8A'};margin-bottom:10px;}
-    .t-pagos{background:#f4f8fb;border-radius:8px;padding:10px 12px;margin:10px 0;}
+    .t-pagos{background:#FBF6EC;border-radius:8px;padding:10px 12px;margin:10px 0;}
     .t-pago-row{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;color:#5A6A7E;}
     .t-pago-row .monto{font-weight:600;color:#4CAF50;font-family:monospace;}
     .t-estado{text-align:center;padding:10px;border-radius:8px;margin:12px 0;background:${saldo===0?'#E8F5E9':'#FFF8E1'};border:1.5px solid ${saldo===0?'#a8d5b0':'#f0d070'};}
     .t-estado-text{font-size:12px;font-weight:700;color:${saldo===0?'#2e7d32':'#b8860b'};}
-    .t-footer{background:#f4f8fb;padding:12px 16px;text-align:center;border-top:1px dashed #e0e6ed;}
-    .t-gracias{font-size:12px;font-weight:700;color:#1F3A5F;margin-bottom:4px;}
-    .t-footer-sub{font-size:10px;color:#8A9BB0;line-height:1.5;}
+    .t-footer{background:#FBF6EC;padding:12px 16px;text-align:center;border-top:1px dashed #E7DCC5;}
+    .t-gracias{font-size:12px;font-weight:700;color:#241C14;margin-bottom:4px;}
+    .t-footer-sub{font-size:10px;color:#7D6F58;line-height:1.5;}
     .t-corte{text-align:center;color:#ccc;font-size:11px;margin:10px 0;letter-spacing:.1em;}
     @media print{body{background:#fff;padding:0;}.ticket{box-shadow:none;border-radius:0;width:100%;}.btn-print{display:none;}}
   </style>
 </head>
 <body>
-<button class="btn-print" onclick="window.print()">🖨️ Imprimir Ticket</button>
+<button class="btn-print" onclick="window.print()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:4px;"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Imprimir Ticket</button>
 <div class="ticket">
   <div class="t-header">
     <img src="${logoURL}" class="t-logo" onerror="this.style.display='none'" />
@@ -5638,7 +5722,7 @@ function imprimirTicket(ventaId) {
   <div class="t-accent"></div>
   <div class="t-cliente">
     <div class="t-cliente-nombre">${esc(cliente?.nombre || v.clienteNombre || 'Cliente')}</div>
-    <div class="t-cliente-tel">${cliente?.telefono ? '📱 ' + cliente.telefono : ''}</div>
+    <div class="t-cliente-tel">${cliente?.telefono ? 'Tel. ' + cliente.telefono : ''}</div>
     <div class="t-folio">
       <span class="t-folio-label">Folio</span>
       <span class="t-folio-val">#${String(ventaId).slice(-8).toUpperCase()}</span>
@@ -5657,7 +5741,7 @@ function imprimirTicket(ventaId) {
     ${pagos.length ? `<div class="t-pagos"><div class="t-section-title" style="margin-bottom:6px;">Pagos registrados</div>${pagos.map(p => `<div class="t-pago-row"><span>${esc(p.fecha)} · ${capitalize(p.metodo || '')}</span><span class="monto">${formatMoney(p.monto)}</span></div>`).join('')}</div>` : ''}
     <div class="t-row pagado"><span class="label">Total pagado</span><span class="value">${formatMoney(pagado)}</span></div>
     <div class="t-row saldo"><span class="label">Saldo pendiente</span><span class="value">${formatMoney(saldo)}</span></div>
-    <div class="t-estado"><div class="t-estado-text">${saldo === 0 ? '✓ CUENTA SALDADA' : `⚠️ PENDIENTE: ${formatMoney(saldo)}`}</div></div>
+    <div class="t-estado"><div class="t-estado-text">${saldo === 0 ? 'CUENTA SALDADA' : `PENDIENTE: ${formatMoney(saldo)}`}</div></div>
   </div>
   <div class="t-corte">- - - - - - - - - - - - - - - - - -</div>
   <div class="t-footer">
@@ -5723,7 +5807,7 @@ Total: ${formatMoney(v.totalFinal)}
 Pagado: ${formatMoney(pagado)}
 Saldo pendiente: ${formatMoney(saldo)}
 
-${saldo === 0 ? '✓ Su cuenta está completamente saldada.' : `⚠️ Recuerde que tiene un saldo pendiente de ${formatMoney(saldo)}.`}
+${saldo === 0 ? 'Su cuenta está completamente saldada.' : `Recuerde que tiene un saldo pendiente de ${formatMoney(saldo)}.`}
 
 Gracias por su preferencia — Óptica-Systems
       `.trim(),
@@ -5820,19 +5904,19 @@ function toggleRevisionDetalle() {
         <div class="revision-card">
           <div class="revision-card-nombre">${esc(c.nombre)}</div>
           <div class="revision-card-info">
-            🕶️ <strong>${esc(lente)}</strong> &nbsp;·&nbsp; Compra: ${esc(fecha)}
+            <i data-feather="eye" style="width:12px;height:12px;vertical-align:-2px;"></i> <strong>${esc(lente)}</strong> &nbsp;·&nbsp; Compra: ${esc(fecha)}
           </div>
-          ${c.telefono ? `<div class="revision-card-info">📱 ${esc(c.telefono)}</div>` : ''}
+          ${c.telefono ? `<div class="revision-card-info"><i data-feather="phone" style="width:12px;height:12px;vertical-align:-2px;"></i> ${esc(c.telefono)}</div>` : ''}
           <span class="revision-card-meses" style="background:#fff3;color:${colorMeses};border:1px solid ${colorMeses}33;">
-            ⏱️ Hace ${mesesTexto} sin revisión
+            <i data-feather="clock" style="width:11px;height:11px;vertical-align:-2px;"></i> Hace ${mesesTexto} sin revisión
           </span>
           <div class="revision-card-btns">
             ${c.email
-              ? `<button class="btn-sm" onclick="enviarRecordatorioRevision('${c.id}')">📧 Recordatorio</button>`
+              ? `<button class="btn-sm" onclick="enviarRecordatorioRevision('${c.id}')"><i data-feather="mail" style="width:12px;height:12px;vertical-align:-2px;"></i> Recordatorio</button>`
               : '<span style="font-size:.75rem;color:#aaa">Sin correo</span>'
             }
             ${c.telefono
-              ? `<a class="btn-sm" href="https://wa.me/52${sanitizarTelefono(c.telefono)}?text=${encodeURIComponent(`Hola ${c.nombre.split(' ')[0]}, ya lleva ${mesesTexto} con sus ${lente} de Óptica-Systems. ¿Le gustaría pasar a una revisión? 👓`)}" target="_blank">📱 WhatsApp</a>`
+              ? `<a class="btn-sm" href="https://wa.me/52${sanitizarTelefono(c.telefono)}?text=${encodeURIComponent(`Hola ${c.nombre.split(' ')[0]}, ya lleva ${mesesTexto} con sus ${lente} de Óptica-Systems. ¿Le gustaría pasar a una revisión?`)}" target="_blank"><i data-feather="message-circle" style="width:12px;height:12px;vertical-align:-2px;"></i> WhatsApp</a>`
               : ''
             }
             <button class="btn-sm" onclick="verDetalleCliente('${c.id}')">Ver ficha</button>
@@ -5867,10 +5951,10 @@ async function enviarRecordatorioRevision(clienteId) {
       to_name:      c.nombre,
       to_email:     c.email,
       tipo:         'visita',                       // ← distingue el tipo en la plantilla
-      etiqueta:     '¿Cómo van tus lentes? 👓',
+      etiqueta:     '¿Cómo van tus lentes?',
       saldo:        `${mesesTexto} desde tu compra`,
       ultimo_pago:  `${lente}${fecha ? ' · adquiridos el ' + fecha : ''}`,
-      mensaje:      `Hola ${c.nombre.split(' ')[0]}, han pasado ${mesesTexto} desde que adquiriste ${lente} en Óptica-Systems. ¡Queremos saber cómo te han ido! Te invitamos a pasar para una revisión sin costo. Recuerda que una buena graduación mejora tu calidad de vida. 👓`,
+      mensaje:      `Hola ${c.nombre.split(' ')[0]}, han pasado ${mesesTexto} desde que adquiriste ${lente} en Óptica-Systems. ¡Queremos saber cómo te han ido! Te invitamos a pasar para una revisión sin costo. Recuerda que una buena graduación mejora tu calidad de vida.`,
       contacto:     'WhatsApp: (282) 129-2915',
     });
     await registrarAuditoria('Pago', `Recordatorio de revisión enviado a ${c.nombre} (${mesesTexto} con ${lente})`);
@@ -5895,34 +5979,29 @@ function generarReportePDF() {
   const periodoKpi = STATE._periodoKpi || 'mes';
   const mesCustom  = STATE._periodoKpiMes || null;
 
-  let desde = null, hasta = null, labelPeriodo = '', iconoPeriodo = '📅';
+  let desde = null, hasta = null, labelPeriodo = '';
 
   if (mesCustom) {
     const [y, m] = mesCustom.split('-').map(Number);
     desde = new Date(y, m - 1, 1);
     hasta = new Date(y, m, 0, 23, 59, 59, 999);
     labelPeriodo = desde.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
-    iconoPeriodo = '🗓️';
   } else if (periodoKpi === 'semana') {
     desde = new Date(hoy); desde.setDate(hoy.getDate() - 6); desde.setHours(0, 0, 0, 0);
     hasta = new Date(hoy); hasta.setHours(23, 59, 59, 999);
     labelPeriodo = 'Esta semana · ' +
       desde.toLocaleDateString('es-MX', { day:'2-digit', month:'short' }) + ' – ' +
       hasta.toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'numeric' });
-    iconoPeriodo = '📆';
   } else if (periodoKpi === 'mes') {
     desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
     hasta = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0, 23, 59, 59, 999);
     labelPeriodo = 'Este mes · ' + hoy.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
-    iconoPeriodo = '📆';
   } else if (periodoKpi === 'año') {
     desde = new Date(hoy.getFullYear(), 0, 1);
     hasta = new Date(hoy.getFullYear(), 11, 31, 23, 59, 59, 999);
     labelPeriodo = 'Año ' + hoy.getFullYear();
-    iconoPeriodo = '📆';
   } else {
     labelPeriodo = 'Histórico total';
-    iconoPeriodo = '🗃️';
   }
 
   // ── Filtrar ventas del período ──
@@ -5996,11 +6075,11 @@ const isPWA = window.navigator.standalone === true ||
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:'Inter',Arial,sans-serif;font-size:12px;color:#1a2b45;background:#e8edf3;padding:24px;}
+    body{font-family:'Inter',Arial,sans-serif;font-size:12px;color:#241C14;background:#F2E9D6;padding:24px;}
     .btn-print{
       display:flex;align-items:center;gap:.5rem;max-width:920px;
       margin:0 auto 16px;padding:10px 28px;
-      background:linear-gradient(135deg,#1F3A5F,#2E5C8A);color:#fff;
+      background:linear-gradient(135deg,#241C14,#2E5C8A);color:#fff;
       border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;
       font-family:'Inter',sans-serif;
     }
@@ -6008,22 +6087,22 @@ const isPWA = window.navigator.standalone === true ||
     .pagina{background:#fff;max-width:920px;margin:0 auto;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.18);}
     /* Header */
     .rpt-header{
-      background:linear-gradient(135deg,#1F3A5F 0%,#2E5C8A 60%,#3a7aaa 100%);
+      background:linear-gradient(135deg,#241C14 0%,#2E5C8A 60%,#3a7aaa 100%);
       padding:24px 32px;display:flex;align-items:center;justify-content:space-between;
       position:relative;overflow:hidden;
     }
     .rpt-header::before{content:'';position:absolute;top:-50px;right:-50px;width:200px;height:200px;border-radius:50%;background:rgba(79,195,199,.1);pointer-events:none;}
     .rpt-logo-area{display:flex;align-items:center;gap:14px;position:relative;z-index:2;}
     .rpt-logo{width:50px;height:50px;border-radius:10px;background:rgba(255,255,255,.12);padding:4px;object-fit:contain;border:1.5px solid rgba(255,255,255,.2);}
-    .rpt-marca .optica{font-size:9px;letter-spacing:.22em;color:#7EC8CB;font-weight:600;display:block;}
+    .rpt-marca .optica{font-size:9px;letter-spacing:.22em;color:#F3C765;font-weight:600;display:block;}
     .rpt-marca .marca-nombre{font-size:22px;font-weight:800;color:#fff;letter-spacing:.04em;}
     .rpt-titulo-area{text-align:right;position:relative;z-index:2;}
-    .rpt-titulo{font-size:11px;font-weight:800;letter-spacing:.16em;color:#7EC8CB;text-transform:uppercase;}
+    .rpt-titulo{font-size:11px;font-weight:800;letter-spacing:.16em;color:#F3C765;text-transform:uppercase;}
     .rpt-fecha{font-size:10.5px;color:rgba(255,255,255,.5);margin-top:4px;}
     .rpt-accent{height:4px;background:linear-gradient(90deg,#4FC3C7,#2E5C8A,#4FC3C7);}
     /* Banner período */
     .rpt-periodo-banner{
-      background:linear-gradient(to right,#EBF4F8,#e4f0f7);
+      background:linear-gradient(to right,#FBF3E3,#F3E7CC);
       border-bottom:2px solid #c8dce8;
       padding:14px 32px;
       display:flex;align-items:center;gap:14px;
@@ -6031,12 +6110,12 @@ const isPWA = window.navigator.standalone === true ||
     .rpt-periodo-icon{font-size:20px;}
     .rpt-periodo-texto{}
     .rpt-periodo-label{font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#6FA9C9;}
-    .rpt-periodo-valor{font-size:15px;font-weight:800;color:#1F3A5F;margin-top:2px;text-transform:capitalize;}
+    .rpt-periodo-valor{font-size:15px;font-weight:800;color:#241C14;margin-top:2px;text-transform:capitalize;}
     /* KPIs */
-    .rpt-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#e0e6ed;border-bottom:1px solid #e0e6ed;}
+    .rpt-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#E7DCC5;border-bottom:1px solid #E7DCC5;}
     .rpt-kpi{background:#fff;padding:18px 16px;text-align:center;}
-    .rpt-kpi-val{font-size:1.35rem;font-weight:800;color:#1F3A5F;font-family:monospace;margin-bottom:5px;letter-spacing:-.01em;}
-    .rpt-kpi-label{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#8A9BB0;}
+    .rpt-kpi-val{font-size:1.35rem;font-weight:800;color:#241C14;font-family:monospace;margin-bottom:5px;letter-spacing:-.01em;}
+    .rpt-kpi-label{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#7D6F58;}
     .rpt-kpi.green .rpt-kpi-val{color:#4CAF50;}
     .rpt-kpi.red   .rpt-kpi-val{color:#E53935;}
     .rpt-kpi.teal  .rpt-kpi-val{color:#4FC3C7;}
@@ -6046,28 +6125,28 @@ const isPWA = window.navigator.standalone === true ||
     .rpt-seccion-titulo{
       display:flex;align-items:center;gap:8px;
       font-size:9px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
-      color:#1F3A5F;background:linear-gradient(to right,#EBF4F8,#f4f8fb);
+      color:#241C14;background:linear-gradient(to right,#FBF3E3,#FBF6EC);
       border-left:3.5px solid #4FC3C7;padding:7px 14px;
       border-radius:0 8px 8px 0;margin-bottom:14px;
     }
     /* Stats */
     .stats-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;}
-    .stat-card{background:#f4f8fb;border-radius:10px;padding:13px 14px;border:1px solid #dde6ef;}
-    .stat-val{font-size:1.15rem;font-weight:800;color:#1F3A5F;font-family:monospace;}
-    .stat-label{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8A9BB0;margin-top:3px;}
+    .stat-card{background:#FBF6EC;border-radius:10px;padding:13px 14px;border:1px solid #E7DCC5;}
+    .stat-val{font-size:1.15rem;font-weight:800;color:#241C14;font-family:monospace;}
+    .stat-label{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#7D6F58;margin-top:3px;}
     /* Métricas adicionales */
     .metricas-extra{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
-    .metrica-ex{background:#f4f8fb;border-radius:8px;padding:10px 12px;border:1px solid #dde6ef;text-align:center;}
-    .metrica-ex-val{font-size:.95rem;font-weight:800;color:#1F3A5F;font-family:monospace;}
-    .metrica-ex-label{font-size:8.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8A9BB0;margin-top:3px;}
+    .metrica-ex{background:#FBF6EC;border-radius:8px;padding:10px 12px;border:1px solid #E7DCC5;text-align:center;}
+    .metrica-ex-val{font-size:.95rem;font-weight:800;color:#241C14;font-family:monospace;}
+    .metrica-ex-label{font-size:8.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7D6F58;margin-top:3px;}
     /* Tabla */
     table.rpt{width:100%;border-collapse:collapse;font-size:11px;}
     table.rpt th{
-      background:linear-gradient(135deg,#1F3A5F,#2E5C8A);color:#fff;
+      background:linear-gradient(135deg,#241C14,#2E5C8A);color:#fff;
       padding:8px 10px;text-align:left;font-weight:700;font-size:9.5px;letter-spacing:.06em;
     }
-    table.rpt td{padding:7px 10px;border-bottom:1px solid #eef2f7;color:#1a2b45;vertical-align:middle;}
-    table.rpt tr:nth-child(even) td{background:#f8fafc;}
+    table.rpt td{padding:7px 10px;border-bottom:1px solid #eef2f7;color:#241C14;vertical-align:middle;}
+    table.rpt tr:nth-child(even) td{background:#FBF6EC;}
     .verde{color:#4CAF50;font-weight:700;}
     .rojo{color:#E53935;font-weight:700;}
     .mono{font-family:monospace;}
@@ -6076,16 +6155,16 @@ const isPWA = window.navigator.standalone === true ||
     .b-amarillo{background:#FFF8E1;color:#b8860b;}
     .b-rojo    {background:#FFEBEE;color:#E53935;}
     .b-azul    {background:rgba(46,92,138,.1);color:#2E5C8A;}
-    .empty-note{text-align:center;padding:22px;color:#8A9BB0;font-style:italic;font-size:11px;}
-    .cap-nota{font-size:10px;color:#8A9BB0;font-style:italic;padding:6px 10px;text-align:right;}
+    .empty-note{text-align:center;padding:22px;color:#7D6F58;font-style:italic;font-size:11px;}
+    .cap-nota{font-size:10px;color:#7D6F58;font-style:italic;padding:6px 10px;text-align:right;}
     /* Footer */
     .rpt-footer{
-      background:linear-gradient(to right,#f4f8fb,#eef4f8);
-      border-top:2px solid #dde9f0;
+      background:linear-gradient(to right,#FBF6EC,#F5EBD5);
+      border-top:2px solid #E7DCC5;
       padding:16px 32px;
       display:flex;justify-content:space-between;align-items:center;
     }
-    .rpt-footer-text{font-size:10px;color:#8A9BB0;}
+    .rpt-footer-text{font-size:10px;color:#7D6F58;}
     .wm-strip{height:3px;background:repeating-linear-gradient(90deg,#4FC3C7 0,#4FC3C7 30px,#2E5C8A 30px,#2E5C8A 60px);opacity:.3;}
     @media print{
       body{background:#fff;padding:0;}
@@ -6099,7 +6178,7 @@ const isPWA = window.navigator.standalone === true ||
   </style>
 </head>
 <body>
-<button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+<button class="btn-print" onclick="window.print()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:4px;"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Imprimir / Guardar PDF</button>
 <div class="pagina">
   <div class="wm-strip"></div>
 
@@ -6120,7 +6199,7 @@ const isPWA = window.navigator.standalone === true ||
 
   <!-- PERÍODO ACTIVO -->
 <div class="rpt-periodo-banner">
-    <div class="rpt-periodo-icon">${iconoPeriodo}</div>
+    <div class="rpt-periodo-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
     <div class="rpt-periodo-texto">
       <div class="rpt-periodo-label">Período del reporte</div>
       <div class="rpt-periodo-valor">${esc(labelPeriodo)}${empLabel ? ` <span style="font-size:.85em;opacity:.75;">· ${esc(empLabel)}</span>` : ''}</div>
@@ -6151,7 +6230,7 @@ const isPWA = window.navigator.standalone === true ||
 
     <!-- RESUMEN DEL PERÍODO -->
     <div class="rpt-seccion">
-      <div class="rpt-seccion-titulo">📊 Resumen del Período</div>
+      <div class="rpt-seccion-titulo">Resumen del Período</div>
       <div class="stats-bar">
         <div class="stat-card">
           <div class="stat-val verde">${ventasPagadas}</div>
@@ -6188,7 +6267,7 @@ const isPWA = window.navigator.standalone === true ||
 
     <!-- CUENTAS CON ADEUDO -->
     <div class="rpt-seccion">
-      <div class="rpt-seccion-titulo">⚠️ Cuentas con Saldo Pendiente — ${esc(labelPeriodo)}</div>
+      <div class="rpt-seccion-titulo">Cuentas con Saldo Pendiente — ${esc(labelPeriodo)}</div>
       ${adeudos.length ? `
       <table class="rpt">
         <thead>
@@ -6216,12 +6295,12 @@ const isPWA = window.navigator.standalone === true ||
         </tbody>
       </table>
       ${adeudos.length === 15 ? '<div class="cap-nota">Mostrando top 15 por monto</div>' : ''}
-      ` : '<div class="empty-note">¡Sin adeudos pendientes en este período! 🎉</div>'}
+      ` : '<div class="empty-note">¡Sin adeudos pendientes en este período!</div>'}
     </div>
 
     <!-- VENTAS DEL PERÍODO -->
     <div class="rpt-seccion">
-      <div class="rpt-seccion-titulo">💰 Ventas del Período — ${esc(labelPeriodo)} (${ventasOrdenadas.length})</div>
+      <div class="rpt-seccion-titulo">Ventas del Período — ${esc(labelPeriodo)} (${ventasOrdenadas.length})</div>
       ${ventasOrdenadas.length ? `
       <table class="rpt">
         <thead>
@@ -6359,7 +6438,7 @@ async function handleImagenProducto(input) {
     preview.style.display = 'block';
     ph.style.display      = 'none';
     actions.style.display = 'flex';
-    statusEl.textContent  = `✓ Imagen lista · ~${finalKB} KB`;
+    statusEl.textContent  = `Imagen lista · ~${finalKB} KB`;
     statusEl.style.color  = 'var(--verde)';
   } catch (err) {
     statusEl.textContent = 'Error al procesar la imagen. Intenta con otro archivo.';
@@ -6392,7 +6471,7 @@ function setImagenProductoUI(url) {
     preview.style.display = 'block';
     ph.style.display      = 'none';
     actions.style.display = 'flex';
-    status.textContent    = '✓ Imagen guardada';
+    status.textContent    = 'Imagen guardada';
     status.style.color    = 'var(--turquesa-dark)';
   } else {
     quitarImagenProducto();
@@ -6484,7 +6563,7 @@ function renderInventario(lista = STATE.inventario) {
           }
           <div>
             <strong>${esc(p.nombre)}</strong>
-            ${p.sku ? `<div style="font-size:.72rem;color:#8A9BB0;font-family:monospace;">${esc(p.sku)}</div>` : ''}
+            ${p.sku ? `<div style="font-size:.72rem;color:#7D6F58;font-family:monospace;">${esc(p.sku)}</div>` : ''}
           </div>
         </div>
       </td>
@@ -6683,7 +6762,7 @@ async function guardarAjusteStock() {
   else nuevoStock = cantidad; // ajuste directo
 
   if (tipo === 'ajuste' && nuevoStock === 0) {
-    if (!confirm(`⚠️ Estás poniendo el stock de "${p.nombre}" en CERO. ¿Confirmas?`)) return;
+    if (!confirm(`Estás poniendo el stock de "${p.nombre}" en CERO. ¿Confirmas?`)) return;
   }
   showLoading('Actualizando stock...');
   try {
@@ -6701,8 +6780,8 @@ async function guardarAjusteStock() {
     filterInventario();
     showToast(`Stock actualizado: ${p.nombre} → ${nuevoStock} unidades`, 'success');
 
-    if (nuevoStock === 0) showToast(`⚠️ ${p.nombre} se ha agotado`, 'warning', 5000);
-    else if (nuevoStock <= parseInt(p.stockMin || 3)) showToast(`⚠️ ${p.nombre} tiene stock bajo (${nuevoStock} unidades)`, 'warning', 5000);
+    if (nuevoStock === 0) showToast(`${p.nombre} se ha agotado`, 'warning', 5000);
+    else if (nuevoStock <= parseInt(p.stockMin || 3)) showToast(`${p.nombre} tiene stock bajo (${nuevoStock} unidades)`, 'warning', 5000);
   } catch (err) {
     showToast('Error al actualizar stock', 'error');
   } finally { hideLoading(); }
