@@ -347,8 +347,7 @@ function crearSesion_(usuarioFila) {
     var ahora = new Date();
     var expira = new Date(ahora.getTime() + CONFIG.SESION_DURACION_MS);
 
-    limpiarSesionesExpiradas_(hoja);
-    limitarSesionesActivas_(hoja, usuarioFila.id);
+    limpiarYLimitarSesiones_(hoja, usuarioFila.id);
 
     hoja.appendRow([
       tokenHash, usuarioFila.id, usuarioFila.usuario, usuarioFila.rol,
@@ -426,30 +425,41 @@ function revocarTodasLasSesionesDe_(usuarioId) {
   }
 }
 
-/** Elimina de la hoja toda sesión ya expirada (limpieza general, se ejecuta en cada login). */
-function limpiarSesionesExpiradas_(hoja) {
+/** Elimina sesiones expiradas y, si el usuario ya tiene demasiadas activas,
+ *  las suyas más antiguas — en UNA sola lectura y UNA sola reescritura
+ *  masiva de la hoja. Antes eran dos funciones separadas que releían la
+ *  hoja completa cada una y borraban fila por fila con deleteRow() (la
+ *  operación más lenta de Sheets, ~ decenas a cientos de ms cada llamada);
+ *  con sesiones acumuladas a lo largo del tiempo eso dominaba el tiempo
+ *  de respuesta del login. Se ejecuta en cada login. */
+function limpiarYLimitarSesiones_(hoja, usuarioId) {
   var datos = leerFilas_(CONFIG.HOJAS.SESIONES);
+  if (!datos.filas.length) return;
   var ahora = new Date();
-  for (var i = datos.filas.length - 1; i >= 0; i--) {
-    var s = datos.filas[i];
-    if (new Date(s.expira) < ahora) hoja.deleteRow(s._fila);
-  }
-}
 
-/** Si el usuario ya tiene demasiadas sesiones activas, elimina las más antiguas. */
-function limitarSesionesActivas_(hoja, usuarioId) {
-  var datos = leerFilas_(CONFIG.HOJAS.SESIONES);
-  var propias = datos.filas
-    .filter(function (s) { return String(s.usuarioId) === String(usuarioId); })
+  var propiasVigentesOrdenadas = datos.filas
+    .filter(function (s) { return String(s.usuarioId) === String(usuarioId) && !(new Date(s.expira) < ahora); })
     .sort(function (a, b) { return new Date(a.creado) - new Date(b.creado); });
+  var excedente = propiasVigentesOrdenadas.length - (CONFIG.SESION_MAX_ACTIVAS_POR_USUARIO - 1);
+  var descartarFilas = {};
+  if (excedente > 0) {
+    propiasVigentesOrdenadas.slice(0, excedente).forEach(function (s) { descartarFilas[s._fila] = true; });
+  }
 
-  var excedente = propias.length - (CONFIG.SESION_MAX_ACTIVAS_POR_USUARIO - 1);
-  if (excedente <= 0) return;
-  // Borrar siempre de mayor a menor número de fila para no invalidar índices pendientes.
-  var filasABorrar = propias.slice(0, excedente)
-    .map(function (s) { return s._fila; })
-    .sort(function (a, b) { return b - a; });
-  filasABorrar.forEach(function (fila) { hoja.deleteRow(fila); });
+  var sobreviven = datos.filas.filter(function (s) {
+    return !(new Date(s.expira) < ahora) && !descartarFilas[s._fila];
+  });
+  if (sobreviven.length === datos.filas.length) return; // nada que limpiar
+
+  var encabezados = datos.encabezados;
+  var ultimaFilaOriginal = datos.filas[datos.filas.length - 1]._fila;
+  hoja.getRange(2, 1, ultimaFilaOriginal - 1, encabezados.length).clearContent();
+  if (sobreviven.length) {
+    var filasSalida = sobreviven.map(function (s) {
+      return encabezados.map(function (col) { return s[col]; });
+    });
+    hoja.getRange(2, 1, filasSalida.length, encabezados.length).setValues(filasSalida);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -895,6 +905,24 @@ function manejarAdminSetActivo_(admin, payload) {
   return { ok: true };
 }
 
+/** Permite a cualquier usuario autenticado cambiar su PROPIO nombre visible.
+ *  El objetivo se toma siempre de la sesión (nunca del payload), así que es
+ *  imposible renombrar a otra persona con esta acción — y nunca toca "rol". */
+function manejarActualizarNombrePropio_(usuario, payload) {
+  var nombre = String(payload && payload.nombre || '').trim();
+  if (!nombre) return { ok: false, error: 'El nombre no puede estar vacío.' };
+  if (nombre.length > 80) return { ok: false, error: 'El nombre es demasiado largo.' };
+
+  var usuarios = leerFilas_(CONFIG.HOJAS.USUARIOS);
+  var fila = usuarios.filas.filter(function (u) { return normalizarUsuario_(u.usuario) === normalizarUsuario_(usuario.usuario); })[0];
+  if (!fila) return { ok: false, error: 'Usuario no encontrado.' };
+
+  var colNombre = usuarios.encabezados.indexOf('nombre') + 1;
+  usuarios.hoja.getRange(fila._fila, colNombre).setValue(nombre);
+  registrarEvento_(usuario.nombre, 'Actualizar perfil', 'Cambió su nombre a "' + nombre + '".');
+  return { ok: true, nombre: nombre };
+}
+
 /** Cambia el rol de OTRO usuario. Un admin nunca puede cambiar su propio rol (evita que se autodegrade y se quede sin acceso). */
 function manejarAdminCambiarRol_(admin, payload) {
   if (!esAdmin_(admin)) return { ok: false, error: 'No tienes permisos para esta acción.' };
@@ -1101,6 +1129,8 @@ function doPost(e) {
         return responderJson_(manejarAdminSetActivo_(usuario, body.payload));
       case 'admin_cambiar_rol':
         return responderJson_(manejarAdminCambiarRol_(usuario, body.payload));
+      case 'actualizar_nombre_propio':
+        return responderJson_(manejarActualizarNombrePropio_(usuario, body.payload));
       case 'admin_revocar_sesiones':
         return responderJson_(manejarAdminRevocarSesiones_(usuario, body.payload));
       case 'admin_listar_usuarios':

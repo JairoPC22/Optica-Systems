@@ -476,6 +476,19 @@ async function handleLogin(e) {
   }
 }
 
+/** Confirmación antes de cerrar sesión manualmente (no se usa en los cierres
+ *  automáticos por sesión inválida/expirada — esos deben ser inmediatos). */
+function confirmarLogout() {
+  confirmarAccion({
+    titulo: 'Cerrar sesión',
+    texto: '¿Estás seguro de que quieres cerrar tu sesión?',
+    textoBoton: 'Cerrar sesión',
+    claseBoton: 'danger',
+    icono: 'log-out',
+    onConfirmar: () => handleLogout(),
+  });
+}
+
 function handleLogout() {
   // Mejor esfuerzo: revocar la sesión en el servidor (fetch directo, sin pasar
   // por apiAccion, para no disparar su manejo de "sesión inválida" mientras
@@ -515,9 +528,6 @@ function handleLogout() {
   try { if (_chartEstados)    { _chartEstados.destroy();    _chartEstados = null; } } catch(e) {}
   try { if (_chartNumVentas)  { _chartNumVentas.destroy();  _chartNumVentas = null; } } catch(e) {}
   try { if (_chartInventario) { _chartInventario.destroy(); _chartInventario = null; } } catch(e) {}
-  try {
-    Object.keys(_echarts3D).forEach(k => { if (_echarts3D[k]) { _echarts3D[k].dispose(); _echarts3D[k] = null; } });
-  } catch(e) {}
   _periodoActual = 'semana';
 
   document.getElementById('app').classList.add('hidden');
@@ -774,16 +784,32 @@ function _sombrear_(hex) {
   return `#${[f(n >> 16 & 255), f(n >> 8 & 255), f(n & 255)].map(c => c.toString(16).padStart(2, '0')).join('')}`;
 }
 
+/** Opciones disponibles en el personalizador de avatar — cada atributo se
+ *  elige de forma independiente, así que las combinaciones posibles son
+ *  muchas más que un puñado de diseños fijos. */
+const AVATAR_OPCIONES = {
+  fondo: ['#2E5C8A', '#4FC3C7', '#4CAF50', '#8A7F6E', '#B06B7A', '#8B7FA8', '#4A6670', '#5B8C74'],
+  piel:  ['#F5DCC0', '#E7C9A6', '#D9AF87', '#C68642', '#8D5B3C'],
+  pelo:  ['#241C14', '#6B5D3F', '#B5651D', '#D9D9D9', '#F2D06B'],
+  peinado: Object.keys(_PEINADOS_),
+  gafas:   Object.keys(_GAFAS_),
+};
+
+/** Combinaciones listas para elegir con un clic (atajos rápidos, no limitan
+ *  las opciones — el resto se arma libremente en el personalizador). */
 const AVATAR_PRESETS = [
-  _avatarCharSVG_('#2E5C8A', '#E7C9A6', '#241C14', 'redonda',  'corto'),
-  _avatarCharSVG_('#4FC3C7', '#D9AF87', '#3D3021', 'cuadrada', 'largo'),
-  _avatarCharSVG_('#4CAF50', '#EFCFAA', '#1C140C', 'gatuna',   'chongo'),
-  _avatarCharSVG_('#8A7F6E', '#D9AF87', '#6B5D3F', 'pasta',    'rizado'),
-  _avatarCharSVG_('#B06B7A', '#E7C9A6', '#241C14', 'redonda',  'calvo'),
-  _avatarCharSVG_('#8B7FA8', '#EFCFAA', '#241C14', 'cuadrada', 'pico'),
-  _avatarCharSVG_('#4A6670', '#D9AF87', '#1C140C', 'gatuna',   'raya'),
-  _avatarCharSVG_('#5B8C74', '#E7C9A6', '#241C14', 'pasta',    'gorro'),
+  { fondo: '#2E5C8A', piel: '#E7C9A6', pelo: '#241C14', gafas: 'redonda',  peinado: 'corto' },
+  { fondo: '#4FC3C7', piel: '#D9AF87', pelo: '#6B5D3F', gafas: 'cuadrada', peinado: 'largo' },
+  { fondo: '#4CAF50', piel: '#F5DCC0', pelo: '#241C14', gafas: 'gatuna',   peinado: 'chongo' },
+  { fondo: '#8A7F6E', piel: '#D9AF87', pelo: '#6B5D3F', gafas: 'pasta',    peinado: 'rizado' },
+  { fondo: '#B06B7A', piel: '#8D5B3C', pelo: '#241C14', gafas: 'redonda', peinado: 'calvo' },
+  { fondo: '#8B7FA8', piel: '#F5DCC0', pelo: '#B5651D', gafas: 'cuadrada', peinado: 'pico' },
+  { fondo: '#4A6670', piel: '#C68642', pelo: '#D9D9D9', gafas: 'gatuna',   peinado: 'raya' },
+  { fondo: '#5B8C74', piel: '#E7C9A6', pelo: '#F2D06B', gafas: 'pasta',    peinado: 'gorro' },
 ];
+
+function _avatarDefecto_() { return { ...AVATAR_PRESETS[0] }; }
+function _renderAvatar_(cfg) { return _avatarCharSVG_(cfg.fondo, cfg.piel, cfg.pelo, cfg.gafas, cfg.peinado); }
 
 function _perfilLocalKey_() {
   return 'opticasystems_perfil_' + (STATE.usuario?.id || '');
@@ -804,31 +830,68 @@ function saludoPorHora_() {
 
 function abrirMiPerfil() {
   const perfil = leerPerfilLocal_();
-  const cont = document.getElementById('avatar-picker');
-  if (cont) {
-    cont.innerHTML = AVATAR_PRESETS.map((svg, i) => `
-      <div class="avatar-swatch${(perfil.avatarIdx || 0) === i ? ' activo' : ''}" data-idx="${i}" onclick="seleccionarAvatarPerfil_(${i})">${svg}</div>
-    `).join('');
-  }
-  document.getElementById('perfil-nombre').value = perfil.nombre || STATE.usuario.nombre;
+  STATE._avatarEnEdicion = perfil.avatar
+    ? { ...perfil.avatar }
+    : Number.isInteger(perfil.avatarIdx) && AVATAR_PRESETS[perfil.avatarIdx]
+      ? { ...AVATAR_PRESETS[perfil.avatarIdx] }
+      : _avatarDefecto_();
+  renderAvatarEditor_();
+  document.getElementById('perfil-nombre').value = STATE.usuario.nombre;
   document.getElementById('perfil-rol').value = STATE.usuario.rol;
   openModal('modal-mi-perfil');
 }
 
-function seleccionarAvatarPerfil_(idx) {
-  document.querySelectorAll('#avatar-picker .avatar-swatch').forEach((el, i) => {
-    el.classList.toggle('activo', i === idx);
-  });
-  document.getElementById('avatar-picker').dataset.seleccionado = idx;
+/** Redibuja el personalizador completo (vista previa + cada fila de opciones)
+ *  con la configuración actual en STATE._avatarEnEdicion. */
+function renderAvatarEditor_() {
+  const cfg = STATE._avatarEnEdicion;
+  document.getElementById('avatar-preview').innerHTML = _renderAvatar_(cfg);
+
+  const swatchColor = (attr, val) => `
+    <div class="avatar-swatch-color${cfg[attr] === val ? ' activo' : ''}" style="background:${val}"
+         onclick="cambiarAtributoAvatar_('${attr}','${val}')" title="${val}"></div>`;
+  const swatchMini = (attr, val) => `
+    <div class="avatar-swatch-mini${cfg[attr] === val ? ' activo' : ''}"
+         onclick="cambiarAtributoAvatar_('${attr}','${val}')">${_renderAvatar_({ ...cfg, [attr]: val })}</div>`;
+
+  document.getElementById('avatar-swatches-fondo').innerHTML   = AVATAR_OPCIONES.fondo.map(v => swatchColor('fondo', v)).join('');
+  document.getElementById('avatar-swatches-piel').innerHTML    = AVATAR_OPCIONES.piel.map(v => swatchColor('piel', v)).join('');
+  document.getElementById('avatar-swatches-pelo').innerHTML    = AVATAR_OPCIONES.pelo.map(v => swatchColor('pelo', v)).join('');
+  document.getElementById('avatar-swatches-peinado').innerHTML = AVATAR_OPCIONES.peinado.map(v => swatchMini('peinado', v)).join('');
+  document.getElementById('avatar-swatches-gafas').innerHTML   = AVATAR_OPCIONES.gafas.map(v => swatchMini('gafas', v)).join('');
+  document.getElementById('avatar-swatches-preset').innerHTML  = AVATAR_PRESETS.map((p, i) => `
+    <div class="avatar-swatch-mini" onclick="aplicarPresetAvatar_(${i})" title="Combinación ${i + 1}">${_renderAvatar_(p)}</div>
+  `).join('');
 }
 
-function guardarMiPerfil(e) {
+function cambiarAtributoAvatar_(attr, valor) {
+  STATE._avatarEnEdicion[attr] = valor;
+  renderAvatarEditor_();
+}
+
+function aplicarPresetAvatar_(idx) {
+  STATE._avatarEnEdicion = { ...AVATAR_PRESETS[idx] };
+  renderAvatarEditor_();
+}
+
+/** El avatar es una preferencia LOCAL (no viaja al backend). El nombre, en
+ *  cambio, sí se guarda en la base de datos — es el nombre real del usuario. */
+async function guardarMiPerfil(e) {
   e.preventDefault();
   const nombre = document.getElementById('perfil-nombre').value.trim();
-  const avatarIdxTexto = document.getElementById('avatar-picker').dataset.seleccionado;
-  const perfilPrevio = leerPerfilLocal_();
-  const avatarIdx = avatarIdxTexto !== undefined ? parseInt(avatarIdxTexto, 10) : (perfilPrevio.avatarIdx || 0);
-  localStorage.setItem(_perfilLocalKey_(), JSON.stringify({ nombre: nombre || null, avatarIdx }));
+  if (!nombre) { showToast('El nombre no puede estar vacío', 'warning'); return; }
+
+  localStorage.setItem(_perfilLocalKey_(), JSON.stringify({ avatar: STATE._avatarEnEdicion }));
+
+  if (nombre !== STATE.usuario.nombre) {
+    const btn = e.target.querySelector('button[type=submit]');
+    if (btn) btn.disabled = true;
+    const json = await apiAccion('actualizar_nombre_propio', { nombre });
+    if (btn) btn.disabled = false;
+    if (!json.ok) { showToast(json.error || 'No se pudo actualizar el nombre', 'error'); return; }
+    STATE.usuario.nombre = nombre;
+    guardarSesionStorage();
+  }
   renderUsuarioUI();
   closeAllModals();
   showToast('Perfil actualizado', 'success');
@@ -838,10 +901,11 @@ function renderUsuarioUI() {
   const u = STATE.usuario;
   if (!u) return;
   const perfilLocal = leerPerfilLocal_();
-  const nombreMostrado = perfilLocal.nombre || u.nombre;
+  const nombreMostrado = u.nombre;
   const initials = nombreMostrado.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
-  const tieneAvatar = Number.isInteger(perfilLocal.avatarIdx) && AVATAR_PRESETS[perfilLocal.avatarIdx];
-  const avatarSVG = tieneAvatar ? AVATAR_PRESETS[perfilLocal.avatarIdx] : null;
+  const avatarCfg = perfilLocal.avatar
+    || (Number.isInteger(perfilLocal.avatarIdx) && AVATAR_PRESETS[perfilLocal.avatarIdx]);
+  const avatarSVG = avatarCfg ? _renderAvatar_(avatarCfg) : null;
 
   setText('sidebar-username', nombreMostrado);
   setText('sidebar-role', u.rol);
@@ -5587,48 +5651,19 @@ function renderGraficas() {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   🧊  GRÁFICAS 3D (ECharts + ECharts-GL, carga diferida)
+   🧊  GRÁFICAS 3D (bloques isométricos en CSS puro)
    ──────────────────────────────────────────────────────────────
-   Las gráficas 3D son un complemento visual, nunca la única forma
-   de ver los datos: por accesibilidad, cada gráfica 2D (Chart.js)
-   sigue siendo la vista por defecto, con sus valores disponibles
-   como texto (KPIs, tooltips, exportación a CSV). El botón "3D"
-   alterna a una vista adicional, no sustituye la accesible.
-   Las librerías (~1.7 MB) solo se descargan la primera vez que el
-   usuario realmente pide ver una gráfica en 3D — nunca en la carga
-   inicial de la página.
+   Antes usaba ECharts-GL (WebGL): en ciertas combinaciones de GPU/
+   controlador el compilador de shaders lanzaba "Invalid expression"
+   de forma irrecuperable y la vista 3D nunca aparecía, sin importar
+   qué configuración de luz/versión se probara. Esta versión dibuja
+   bloques isométricos con transforms 2D (sin WebGL), así que
+   funciona igual en cualquier dispositivo — instantáneo, sin
+   descargar ninguna librería adicional.
 ══════════════════════════════════════════════════════════════ */
 
-let _echartsCargando = null;
-const _echarts3D = { ventas: null, inventario: null }; // instancias activas por gráfica
-
-function cargarScript_(src, integrity) {
-  return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = src;
-    if (integrity) { script.integrity = integrity; script.crossOrigin = 'anonymous'; }
-    script.onload = resolve;
-    script.onerror = () => reject(new Error('No se pudo cargar ' + src));
-    document.head.appendChild(script);
-  });
-}
-
-/** Carga ECharts + ECharts-GL una sola vez (llamadas repetidas reusan la misma promesa). */
-function cargarECharts_() {
-  if (window.echarts) return Promise.resolve();
-  if (_echartsCargando) return _echartsCargando;
-  _echartsCargando = cargarScript_(
-    'https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js',
-    'sha384-pPi0zxBAoDu6+JXW/C68UZLvBUUtU+7zonhif43rqj7pxsGyqyqzcian2Rj37Rss'
-  ).then(() => cargarScript_(
-    'https://cdn.jsdelivr.net/npm/echarts-gl@2.1.0/dist/echarts-gl.min.js',
-    'sha384-RSPZ3vSNVFJnUBsUVMnD0qizvywfxO1bcpIeS9dg5sseJ+Daf08BIyMCZMX+rmLl'
-  )).catch(err => { _echartsCargando = null; throw err; });
-  return _echartsCargando;
-}
-
-/** Muestra/oculta la gráfica 3D de "nombre" ('ventas' o 'inventario'), cargando ECharts si hace falta. */
-async function toggleGrafica3D(nombre) {
+/** Muestra/oculta la gráfica 3D de "nombre" ('ventas' o 'inventario'). */
+function toggleGrafica3D(nombre) {
   const canvasWrap = document.getElementById(`chart-${nombre}-2d-wrap`);
   const contenedor3D = document.getElementById(`chart-${nombre}-3d`);
   const boton = document.getElementById(`btn-3d-${nombre}`);
@@ -5642,46 +5677,16 @@ async function toggleGrafica3D(nombre) {
     return;
   }
 
-  boton.disabled = true;
-  try {
-    await cargarECharts_();
-  } catch (err) {
-    console.error('Error al cargar la librería de gráficas 3D:', err);
-    showToast('No se pudo cargar la librería 3D (revisa tu conexión)', 'error');
-    boton.disabled = false;
-    return;
-  }
-
-  try {
-    canvasWrap.classList.add('hidden');
-    contenedor3D.classList.remove('hidden');
-    boton.classList.add('activo');
-    // Esperar a que el navegador termine el layout tras quitar "hidden":
-    // ECharts-GL mide el contenedor al inicializar, y si lo hace en el mismo
-    // instante en que pasa de display:none a visible, a veces todavía lee
-    // tamaño cero y falla al compilar los shaders de luz/sombra (sin lanzar
-    // un error visible, simplemente no crea el <canvas>). Se usa
-    // setTimeout en vez de requestAnimationFrame porque rAF se suspende por
-    // completo en pestañas en segundo plano (document.hidden) y podría no
-    // disparar nunca si el usuario cambia de pestaña justo después de hacer
-    // clic; setTimeout sigue ejecutándose (aunque con más retraso) en ese caso.
-    await new Promise(r => setTimeout(r, 50));
-    actualizarGrafica3DSiVisible(nombre);
-  } catch (err) {
-    console.error('Error al iniciar la vista 3D:', err);
-    showToast('Este dispositivo no pudo iniciar la vista 3D', 'error');
-    contenedor3D.classList.add('hidden');
-    canvasWrap.classList.remove('hidden');
-    boton.classList.remove('activo');
-  } finally {
-    boton.disabled = false;
-  }
+  canvasWrap.classList.add('hidden');
+  contenedor3D.classList.remove('hidden');
+  boton.classList.add('activo');
+  actualizarGrafica3DSiVisible(nombre);
 }
 
 /** Si la gráfica 3D de "nombre" está visible, la redibuja con los datos más recientes. */
-function actualizarGrafica3DSiVisible(nombre, _reintento) {
+function actualizarGrafica3DSiVisible(nombre) {
   const contenedor = document.getElementById(`chart-${nombre}-3d`);
-  if (!contenedor || contenedor.classList.contains('hidden') || !window.echarts) return;
+  if (!contenedor || contenedor.classList.contains('hidden')) return;
 
   const datosGrafica =
     nombre === 'ventas'      ? STATE._ultimaGraficaVentas :
@@ -5689,107 +5694,29 @@ function actualizarGrafica3DSiVisible(nombre, _reintento) {
   if (!datosGrafica) return;
 
   const config = nombre === 'ventas'
-    ? ['Ingresos', PALETA.azulMedio, PALETA.acento, v => formatMoney(v)]
-    : ['Unidades en stock', PALETA.turquesaOscuro, PALETA.amarillo, v => `${v} u.`];
-  dibujarBarras3D_(contenedor, nombre, datosGrafica.labels, datosGrafica.datos, ...config);
-
-  // La primera vez que se crea la instancia en una pestaña recién cargada,
-  // ECharts-GL a veces no llega a pintar el <canvas> WebGL en el primer
-  // intento (parece una condición de carrera interna de la librería, no
-  // reproducible de forma determinista). Reintentar tras una pausa lo
-  // resuelve en la mayoría de los casos. Si tras varios intentos sigue sin
-  // aparecer (p. ej. WebGL no disponible en ese equipo/navegador), se
-  // muestra un aviso claro en vez de dejar una caja en blanco.
-  setTimeout(() => {
-    const c = document.getElementById(`chart-${nombre}-3d`);
-    if (!c || c.classList.contains('hidden') || c.querySelector('canvas')) return;
-    const siguiente = (_reintento || 0) + 1;
-    if (siguiente <= 2) {
-      actualizarGrafica3DSiVisible(nombre, siguiente);
-    } else {
-      mostrarFallback3D_(c, nombre);
-    }
-  }, 1500);
+    ? [PALETA.azulMedio, PALETA.acento, v => formatMoney(v)]
+    : [PALETA.turquesaOscuro, PALETA.amarillo, v => `${v} u.`];
+  dibujarBarras3D_(contenedor, datosGrafica.labels, datosGrafica.datos, ...config);
 }
 
-/** Muestra un aviso accesible cuando la vista 3D no puede renderizarse (sin WebGL, GPU no compatible, etc.). */
-function mostrarFallback3D_(contenedor, nombre) {
-  if (_echarts3D[nombre]) {
-    try { _echarts3D[nombre].dispose(); } catch (_e) { /* instancia ya rota, ignorar */ }
-    _echarts3D[nombre] = null;
-  }
-  contenedor.innerHTML = `
-    <div class="grafica-3d-fallback">
-      <p>No se pudo mostrar la vista 3D en este dispositivo o navegador.</p>
-      <button type="button" class="btn-outline btn-sm" onclick="toggleGrafica3D('${nombre}')">Volver a la vista 2D</button>
-    </div>`;
-}
-
-/** Dibuja (o redibuja) una gráfica de barras 3D genérica dentro de `contenedor`. */
-function dibujarBarras3D_(contenedor, clave, labels, datos, nombreSerie, colorBase, colorDestacado, formatoValor) {
-  if (!window.echarts) return;
-  const modoOscuro = document.body.classList.contains('dark');
-  const colorTexto = modoOscuro ? '#9ab0c8' : PALETA.grisLabel;
-
-  const esNueva = !_echarts3D[clave];
-  if (esNueva) {
-    // Inicializar ECharts-GL directamente sobre el <div> tal cual lo dejó el
-    // parser HTML al cargar la página falla de forma reproducible al
-    // compilar shaders 3D ("Invalid expression") con esta combinación de
-    // GPU/controlador — comprobado exhaustivamente. Un clon exacto del mismo
-    // nodo (mismo id, mismas clases) sí funciona siempre, así que se
-    // reemplaza el nodo original por un clon antes de inicializar. Como el
-    // resto del código siempre vuelve a pedir el contenedor con
-    // getElementById en cada llamada (nunca guarda la referencia vieja),
-    // este cambio es transparente para el resto de la función.
-    const clon = contenedor.cloneNode(false);
-    contenedor.replaceWith(clon);
-    contenedor = clon;
-    const nodoInterno = document.createElement('div');
-    nodoInterno.style.width = '100%';
-    nodoInterno.style.height = '100%';
-    contenedor.appendChild(nodoInterno);
-    _echarts3D[clave] = echarts.init(nodoInterno, null, { renderer: 'canvas' });
-  }
+/** Dibuja (o redibuja) una gráfica de barras isométrica dentro de `contenedor`. */
+function dibujarBarras3D_(contenedor, labels, datos, colorBase, colorDestacado, formatoValor) {
   const maximo = Math.max(1, ...datos);
-  const data3D = datos.map((v, i) => ({
-    value: [i, 0, v],
-    itemStyle: { color: v === maximo ? colorDestacado : colorBase },
-  }));
-
-  _echarts3D[clave].setOption({
-    animation: !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-    tooltip: {
-      formatter: p => p.value ? `${labels[p.value[0]]}<br/>${nombreSerie}: <b>${formatoValor(p.value[2])}</b>` : '',
-    },
-    xAxis3D: { type: 'category', data: labels, axisLabel: { color: colorTexto, fontSize: 10, interval: 0, rotate: labels.length > 8 ? 30 : 0 } },
-    yAxis3D: { type: 'category', data: [nombreSerie], axisLabel: { show: false } },
-    zAxis3D: { type: 'value', axisLabel: { color: colorTexto, fontSize: 10 } },
-    grid3D: {
-      boxWidth: 100, boxHeight: 55, boxDepth: 35,
-      viewControl: { alpha: 22, beta: 25, distance: 155, autoRotate: false },
-      // Sin configuración explícita de "light": en algunas GPU/controladores
-      // (comprobado con AMD Vega vía ANGLE/D3D11) personalizar la luz aquí
-      // hace que ECharts-GL falle al compilar los shaders ("Invalid
-      // expression") y la gráfica 3D nunca aparece. shading:'lambert' en la
-      // serie ya da una iluminación razonable con la luz por defecto.
-    },
-    series: [{
-      type: 'bar3D',
-      data: data3D,
-      shading: 'lambert',
-      barSize: labels.length > 10 ? 4 : 8,
-      bevelSize: 0.3,
-    }],
-  });
-
-  // El observer de tamaño se conecta DESPUÉS del primer setOption — llamar
-  // a resize() en una instancia 3D que todavía no tiene series configuradas
-  // deja a ECharts-GL en un estado roto (lanza "Invalid expression" al
-  // compilar sombreadores) y ya nunca vuelve a crear el <canvas> WebGL.
-  if (esNueva) {
-    new ResizeObserver(() => _echarts3D[clave] && _echarts3D[clave].resize()).observe(contenedor);
-  }
+  contenedor.innerHTML = `<div class="bars3d-scene">${
+    datos.map((v, i) => {
+      const esMax = v === maximo && v > 0;
+      const base = esMax ? colorDestacado : colorBase;
+      const alto = Math.max(4, Math.round((v / maximo) * 100));
+      return `
+        <div class="bar3d-col">
+          <div class="bar3d-valor">${esc(formatoValor(v))}</div>
+          <div class="bar3d-stage">
+            <div class="bar3d-cubo" style="--h:${alto}%;--c-base:${base};--c-luz:${_aclarar_(base)};--c-sombra:${_sombrear_(base)};" title="${esc(labels[i])}: ${esc(formatoValor(v))}"></div>
+          </div>
+          <div class="bar3d-etiqueta">${esc(labels[i])}</div>
+        </div>`;
+    }).join('')
+  }</div>`;
 }
 
 // Genera badge HTML de tendencia (+12% / -5%)

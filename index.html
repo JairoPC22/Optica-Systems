@@ -189,7 +189,7 @@
           <i data-feather="key"></i>
           <span>Cambiar contraseña</span>
         </button>
-        <button class="btn-logout" onclick="handleLogout()">
+        <button class="btn-logout" onclick="confirmarLogout()">
           <i data-feather="log-out"></i>
           <span>Cerrar sesión</span>
         </button>
@@ -1792,7 +1792,7 @@
   </div>
 
   <!-- ── MODAL: MI PERFIL ── -->
-  <div class="modal modal-sm" id="modal-mi-perfil">
+  <div class="modal" id="modal-mi-perfil">
     <div class="modal-header">
       <h2>Mi Perfil</h2>
       <button class="modal-close" onclick="closeAllModals()"><i data-feather="x"></i></button>
@@ -1801,16 +1801,43 @@
       <div class="modal-body">
         <div class="form-group">
           <label>Avatar</label>
-          <div class="avatar-picker" id="avatar-picker"></div>
+          <div class="avatar-editor" id="avatar-editor">
+            <div class="avatar-preview" id="avatar-preview"></div>
+            <div>
+              <span class="avatar-atributo-label">Fondo</span>
+              <div class="avatar-swatches" id="avatar-swatches-fondo"></div>
+            </div>
+            <div>
+              <span class="avatar-atributo-label">Piel</span>
+              <div class="avatar-swatches" id="avatar-swatches-piel"></div>
+            </div>
+            <div>
+              <span class="avatar-atributo-label">Cabello</span>
+              <div class="avatar-swatches" id="avatar-swatches-pelo"></div>
+            </div>
+            <div>
+              <span class="avatar-atributo-label">Peinado</span>
+              <div class="avatar-swatches" id="avatar-swatches-peinado"></div>
+            </div>
+            <div>
+              <span class="avatar-atributo-label">Lentes</span>
+              <div class="avatar-swatches" id="avatar-swatches-gafas"></div>
+            </div>
+            <div>
+              <span class="avatar-atributo-label">Combinaciones sugeridas</span>
+              <div class="avatar-swatches" id="avatar-swatches-preset"></div>
+            </div>
+          </div>
         </div>
         <div class="form-group">
           <label for="perfil-nombre">Nombre para mostrar</label>
           <input type="text" id="perfil-nombre" maxlength="60" placeholder="Tu nombre" />
-          <small class="form-hint">Solo cambia cómo se ve tu nombre en este dispositivo — no modifica tu cuenta.</small>
+          <small class="form-hint">Se guarda en tu cuenta — lo verán los demás usuarios del sistema.</small>
         </div>
         <div class="form-group">
           <label>Rol</label>
           <input type="text" id="perfil-rol" class="input-readonly" readonly />
+          <small class="form-hint">Fijo — solo otro administrador puede cambiarlo, y nunca el tuyo propio.</small>
         </div>
       </div>
       <div class="modal-footer">
