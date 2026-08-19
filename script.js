@@ -663,22 +663,44 @@ function togglePassword(inputId = 'login-pass', iconId = 'pass-eye') {
 ══════════════════════════════════════════════════════════════ */
 
 let _cargaTodasHojasEnCurso = null;
-/** Dispara la carga de las 6 hojas en paralelo, pero solo una vez a la vez:
- *  si ya hay una carga en curso (p. ej. iniciarApp() y un clic en
- *  "Actualizar" se superponen, o el usuario da doble clic mientras espera),
- *  las llamadas siguientes reusan la misma promesa en vez de disparar otra
- *  tanda de 6 peticiones simultáneas — Apps Script empezaba a devolver 404
- *  esporádicos y todo se volvía mucho más lento cuando esto se acumulaba. */
+/** Dispara la carga de las 6 hojas, pero solo una vez a la vez: si ya hay una
+ *  carga en curso (p. ej. iniciarApp() y un clic en "Actualizar" se
+ *  superponen, o el usuario da doble clic mientras espera), las llamadas
+ *  siguientes reusan la misma promesa en vez de disparar otra tanda de
+ *  peticiones simultáneas — Apps Script empezaba a devolver 404 esporádicos
+ *  y todo se volvía mucho más lento cuando esto se acumulaba.
+ *
+ *  Intenta primero la acción "bootstrap" del servidor, que trae las 6 hojas
+ *  en UNA sola petición (un solo viaje de ida y vuelta, una sola validación
+ *  de sesión, un solo posible arranque en frío de Apps Script, en vez de 6).
+ *  Si el backend desplegado todavía no tiene esa acción — porque no se ha
+ *  vuelto a publicar Codigo.gs — cae automáticamente al método anterior de 6
+ *  peticiones en paralelo, así que nunca se rompe por no haber redesplegado;
+ *  simplemente se vuelve más rápido en cuanto se despliega. */
 function cargarTodasLasHojas_() {
   if (_cargaTodasHojasEnCurso) return _cargaTodasHojasEnCurso;
-  _cargaTodasHojasEnCurso = Promise.allSettled([
-    cargarClientes(),
-    cargarVentas(),
-    cargarPagos(),
-    cargarHistorial(),
-    cargarAuditoria(),
-    cargarInventario(),
-  ]).finally(() => { _cargaTodasHojasEnCurso = null; });
+  _cargaTodasHojasEnCurso = (async () => {
+    try {
+      const json = await apiAccion('bootstrap');
+      if (json.ok) {
+        STATE.clientes   = json.clientes   || [];
+        STATE.ventas     = json.ventas     || [];
+        STATE.pagos      = json.pagos      || [];
+        STATE.historial  = json.historial  || [];
+        STATE.auditoria  = json.auditoria  || [];
+        STATE.inventario = json.inventario || [];
+        return [0, 1, 2, 3, 4, 5].map(() => ({ status: 'fulfilled' }));
+      }
+    } catch { /* sin conexión u otro fallo de red: se intenta el respaldo igual */ }
+    return Promise.allSettled([
+      cargarClientes(),
+      cargarVentas(),
+      cargarPagos(),
+      cargarHistorial(),
+      cargarAuditoria(),
+      cargarInventario(),
+    ]);
+  })().finally(() => { _cargaTodasHojasEnCurso = null; });
   return _cargaTodasHojasEnCurso;
 }
 

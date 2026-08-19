@@ -1135,6 +1135,8 @@ function doPost(e) {
         return responderJson_(manejarAdminRevocarSesiones_(usuario, body.payload));
       case 'admin_listar_usuarios':
         return responderJson_(manejarAdminListarUsuarios_(usuario));
+      case 'bootstrap':
+        return responderJson_(manejarBootstrap_(usuario));
       case 'get':
       case 'create':
       case 'update':
@@ -1146,6 +1148,29 @@ function doPost(e) {
   } catch (err) {
     return respuestaError_('Error del servidor al procesar la solicitud.', err && err.stack || err);
   }
+}
+
+/**
+ * Devuelve las 6 hojas de datos "de negocio" (clientes, ventas, pagos,
+ * historial, auditoría, inventario) en UNA sola respuesta. El cliente cargaba
+ * estas mismas 6 hojas con 6 peticiones HTTP paralelas independientes (una
+ * por hoja) en cada login y en cada "Actualizar" — cada una paga su propio
+ * viaje de ida y vuelta, su propia validación de sesión y, si Apps Script no
+ * tenía una instancia caliente disponible, su propio arranque en frío. Esta
+ * acción hace el mismo trabajo de lectura en un solo ciclo de ejecución, así
+ * que solo se paga ese costo fijo una vez en lugar de seis. Auditoría se
+ * omite (array vacío) para quien no sea administrador, igual que ya hacía el
+ * permiso de "get" sobre esa hoja en el canal genérico. */
+function manejarBootstrap_(usuario) {
+  return {
+    ok: true,
+    clientes:   dataObtener_(CONFIG.HOJAS.CLIENTES),
+    ventas:     dataObtener_(CONFIG.HOJAS.VENTAS),
+    pagos:      dataObtener_(CONFIG.HOJAS.PAGOS),
+    historial:  dataObtener_(CONFIG.HOJAS.HISTORIAL),
+    inventario: dataObtener_(CONFIG.HOJAS.INVENTARIO),
+    auditoria:  esAdmin_(usuario) ? dataObtener_(CONFIG.HOJAS.AUDITORIA) : [],
+  };
 }
 
 /** Enruta las operaciones CRUD genéricas validando lista blanca y permisos. */
